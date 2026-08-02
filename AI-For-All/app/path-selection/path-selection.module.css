@@ -1,0 +1,124 @@
+.container {
+  min-height: calc(100vh - 80px);
+  background: var(--color-bg);
+  padding: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  max-width: 500px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-lg) 0;
+  text-align: center;
+}
+
+.pathsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  margin-bottom: var(--spacing-lg);
+}
+
+.pathCard {
+  background-color: var(--color-bg-light);
+  border: 2px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: left;
+  font-family: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  width: 100%;
+  min-height: 100px;
+}
+
+.pathCard:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg);
+  transform: translateX(4px);
+}
+
+.pathCard.selected {
+  border-color: var(--color-primary);
+  background-color: #F3F4FF;
+  box-shadow: 0 0 0 3px rgba(15, 58, 125, 0.1);
+}
+
+.icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background-color: rgba(15, 58, 125, 0.08);
+  border-radius: var(--border-radius-md);
+}
+
+.pathTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.pathDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.continueBtn {
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  width: 100%;
+  min-height: var(--min-tap-target);
+}
+
+.continueBtn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 58, 125, 0.2);
+}
+
+.continueBtn:disabled {
+  background-color: #CCCCCC;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.continueBtn:active:not(:disabled) {
+  transform: translateY(0);
+}

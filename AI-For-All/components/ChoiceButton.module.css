@@ -1,0 +1,124 @@
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--min-tap-target);
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--border-radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  border: 2px solid transparent;
+  text-align: left;
+  gap: var(--spacing-md);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Primary variant */
+.primary {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(15, 58, 125, 0.2);
+}
+
+.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(15, 58, 125, 0.35);
+  background-color: var(--color-primary-light);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(15, 58, 125, 0.2);
+}
+
+/* Secondary variant */
+.secondary {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg);
+  box-shadow: 0 2px 8px rgba(15, 58, 125, 0.1);
+}
+
+.secondary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Feedback states */
+.correctFeedback {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: white;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.incorrectFeedback {
+  background-color: #f44336;
+  border-color: #f44336;
+  color: white;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.text {
+  flex: 1;
+  line-height: var(--line-height-normal);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  min-width: 40px;
+  text-align: center;
+  animation: popIn var(--transition-fast);
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Touch-friendly adjustments */
+@media (max-width: 768px) {
+  .button {
+    min-height: 56px;
+    padding: var(--spacing-md) var(--spacing-md);
+    font-size: var(--font-size-base);
+  }
+
+  .primary:hover:not(:disabled),
+  .primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
