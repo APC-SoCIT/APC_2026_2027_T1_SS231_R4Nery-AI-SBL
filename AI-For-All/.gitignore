@@ -1,0 +1,63 @@
+# ── dependencies ──────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Next.js build output ──────────────────────
+.next/
+out/
+build/
+dist/
+
+# ── environment variables / secrets ───────────
+# Never commit real env files — only .env.example (or similar) should be tracked.
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+!.env.example
+
+# ── secrets / credentials (belt-and-suspenders) ──
+*.pem
+*.key
+*.p12
+*.cer
+*credentials*.json
+*service-account*.json
+
+# ── logs ───────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# ── testing / coverage ─────────────────────────
+coverage/
+.nyc_output/
+
+# ── TypeScript ─────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Vercel ──────────────────────────────────────
+.vercel
+
+# ── editor / IDE ────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS files ────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── misc caches ─────────────────────────────────
+.cache/
+.turbo/
