@@ -49,7 +49,7 @@ export default function AdminStoriesPage() {
       </div>
 
       {loading ? (
-        <div style={{ padding: '2rem', textStyle: 'center', color: '#666' }}>
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
           Loading stories from database...
         </div>
       ) : stories.length === 0 ? (
