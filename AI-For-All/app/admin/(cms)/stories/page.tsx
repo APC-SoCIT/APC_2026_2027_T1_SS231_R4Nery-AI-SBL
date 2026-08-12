@@ -64,7 +64,7 @@ export default function AdminStoriesPage() {
           <p>Create, edit, and publish learning experiences stored in database.</p>
         </div>
         <button className="admin-primary small" style={{ width: 'auto' }} onClick={() => router.push('/admin/stories/create')}>
-          <Plus size={16}/> New story
+          <Plus size={16} /> New story
         </button>
       </div>
 
@@ -80,7 +80,7 @@ export default function AdminStoriesPage() {
         stories.map(story => (
           <div className="admin-story-row" key={story.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', borderBottom: '1px solid #eee' }}>
             <div className="admin-story-icon" style={{ background: story.type === 'with_activity' ? '#fff0ef' : '#eaf2ff', color: story.type === 'with_activity' ? '#c92a20' : '#0755b9', padding: '0.75rem', borderRadius: '10px' }}>
-              <BookOpen size={20}/>
+              <BookOpen size={20} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -105,8 +105,11 @@ export default function AdminStoriesPage() {
               onClick={() => handleToggleStatus(story)}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <span className={story.status === 'Published' ? 'status-live' : 'status-draft'}>
-                {story.status === 'Published' ? <><CheckCircle size={12}/> Published</> : <><Clock size={12}/> Draft</>}
+              <span
+                className={story.status === 'Published' ? 'status-live' : 'status-draft'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                {story.status === 'Published' ? <><CheckCircle size={12} /> Published</> : <><Clock size={12} /> Draft</>}
               </span>
             </button>
 
@@ -123,7 +126,7 @@ export default function AdminStoriesPage() {
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c92a20', padding: '0.4rem' }}
               title="Delete Story"
             >
-              <Trash2 size={18}/>
+              <Trash2 size={18} />
             </button>
           </div>
         ))
