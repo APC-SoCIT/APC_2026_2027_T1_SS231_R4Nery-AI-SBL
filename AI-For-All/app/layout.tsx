@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { SessionProvider } from '@/lib/sessionContext'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -45,7 +46,9 @@ export default function RootLayout({
     // covers 100dvh with its own background, so <html> doesn't need one.
     <html lang="en">
       <body>
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
