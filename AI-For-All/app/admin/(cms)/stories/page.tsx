@@ -5,6 +5,7 @@ import { BookOpen, ChevronRight, Plus, Trash2, CheckCircle, Clock } from 'lucide
 import { useRouter } from 'next/navigation'
 import { StoryModule } from '@/lib/story-data'
 import { fetchAllStories, deleteStoryFromDb, saveStoryToDb } from '@/lib/supabase/stories'
+import toast from 'react-hot-toast'
 
 export default function AdminStoriesPage() {
   const router = useRouter()
@@ -24,16 +25,35 @@ export default function AdminStoriesPage() {
 
   const handleDelete = async (id: string, title: string) => {
     if (confirm(`Are you sure you want to delete "${title}"?`)) {
-      await deleteStoryFromDb(id)
-      setStories(stories.filter(s => s.id !== id))
+      try {
+        await deleteStoryFromDb(id)
+        setStories(stories.filter(s => s.id !== id))
+        toast.success(`Story "${title}" deleted successfully`)
+      } catch (err) {
+        toast.error('Failed to delete story')
+      }
     }
   }
 
   const handleToggleStatus = async (story: StoryModule) => {
     const newStatus = story.status === 'Published' ? 'Draft' : 'Published'
-    const updated = { ...story, status: newStatus as 'Draft' | 'Published', updatedAt: 'Just now' }
-    await saveStoryToDb(updated)
-    setStories(stories.map(s => s.id === story.id ? updated : s))
+    if (confirm(`Are you sure you want to change the status of "${story.title}" to ${newStatus}?`)) {
+      try {
+        const updated = { ...story, status: newStatus as 'Draft' | 'Published', updatedAt: 'Just now' }
+        await saveStoryToDb(updated)
+        setStories(stories.map(s => s.id === story.id ? updated : s))
+        toast.success(`Story status changed to ${newStatus}`)
+      } catch (err) {
+        toast.error(`Failed to change story status to ${newStatus}`)
+      }
+    }
+  }
+
+  const handleEdit = (story: StoryModule) => {
+    if (confirm(`Are you sure you want to edit "${story.title}"?`)) {
+      toast.success(`Opening editor for "${story.title}"...`)
+      router.push(`/admin/stories/${story.id}/edit`)
+    }
   }
 
   return (
@@ -91,7 +111,7 @@ export default function AdminStoriesPage() {
             </button>
 
             <button
-              onClick={() => router.push(`/admin/stories/${story.id}/edit`)}
+              onClick={() => handleEdit(story)}
               style={{ background: '#f0f4ff', border: '1px solid #dbe8ff', borderRadius: '6px', cursor: 'pointer', color: '#0755b9', padding: '0.4rem 0.8rem', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
               title="Edit Story"
             >

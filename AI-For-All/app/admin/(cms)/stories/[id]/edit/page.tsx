@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { StoryModule, StoryScene } from '@/lib/story-data'
 import { fetchStoryById, saveStoryToDb } from '@/lib/supabase/stories'
 import styles from '../../create/create.module.css'
 
-export default function EditStoryPage({ params }: { params: { id: string } }) {
+export default function EditStoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -17,12 +18,12 @@ export default function EditStoryPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const loadStory = async () => {
-      const data = await fetchStoryById(params.id)
+      const data = await fetchStoryById(id)
       if (data) setStory(data)
       setLoading(false)
     }
     loadStory()
-  }, [params.id])
+  }, [id])
 
   if (loading) {
     return (
