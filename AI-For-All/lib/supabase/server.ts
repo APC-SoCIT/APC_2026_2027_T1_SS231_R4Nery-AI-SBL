@@ -1,14 +1,3 @@
-/**
- * lib/supabase/server.ts
- *
- * Server-side Supabase client for Next.js Server Components and Route Handlers.
- * Reads/writes session cookies via @supabase/ssr's createServerClient.
- * Must only be called inside Server Components or Route Handlers (not the browser).
- *
- * Usage:
- *   import { createClient } from '@/lib/supabase/server'
- *   const supabase = await createClient()
- */
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -29,8 +18,9 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Server Component: cookie mutation may be a no-op — middleware
-            // handles session refresh separately.
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
       },
