@@ -1,19 +1,3 @@
-/**
- * middleware.ts  (Next.js App Router root middleware)
- *
- * Responsibilities:
- *  1. Refresh the Supabase session cookie on every request so the access
- *     token never expires mid-session (required by @supabase/ssr).
- *  2. Guard protected routes — redirect unauthenticated visitors to /sign-in.
- *
- * Route classification (design doc §7.2):
- *   Protected  — /account/*, /api/account/*
- *   Public     — everything else (/, /get-started, /sign-in, /sign-up,
- *                /auth/*, /stories, /home, /goals, /archive, /profile, /admin)
- *
- * Note: guests (anonymous sessions) ARE authenticated from Supabase's point
- * of view — isGuest logic lives in sessionContext.tsx, not here.
- */
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 

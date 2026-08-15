@@ -50,7 +50,6 @@ export default function RootLayout({
         <SessionProvider>
           {children}
         </SessionProvider>
-        {children}
         <Toaster position="bottom-right" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
