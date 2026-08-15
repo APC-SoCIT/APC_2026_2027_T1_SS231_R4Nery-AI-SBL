@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { SessionProvider } from '@/lib/sessionContext'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
@@ -46,6 +47,9 @@ export default function RootLayout({
     // covers 100dvh with its own background, so <html> doesn't need one.
     <html lang="en">
       <body>
+        <SessionProvider>
+          {children}
+        </SessionProvider>
         {children}
         <Toaster position="bottom-right" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
