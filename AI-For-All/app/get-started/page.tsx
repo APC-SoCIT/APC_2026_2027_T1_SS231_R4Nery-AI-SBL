@@ -35,10 +35,19 @@ export default function GetStartedPage() {
 
       const supabase = createClient()
       const { error } = await supabase.auth.signInAnonymously()
+
       if (error) {
-        console.error('Anonymous sign-in failed:', error.message)
+        const isAnonymousDisabled = error.message
+          .toLowerCase()
+          .includes('anonymous sign-ins are disabled')
+
+        if (!isAnonymousDisabled) {
+          console.error('Anonymous sign-in failed:', error.message)
+        }
       }
-      // Navigate regardless — guest browsing is always allowed
+
+      // Navigate regardless — guest browsing is always allowed, even when
+      // anonymous sign-ins are disabled in the Supabase project settings.
       router.push('/stories')
     } finally {
       setGuestLoading(false)

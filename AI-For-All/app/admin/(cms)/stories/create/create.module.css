@@ -343,3 +343,176 @@
   transform: none;
   box-shadow: none;
 }
+
+/* ---- Step 2: generating (progress ring + mascot + checklist) ---- */
+.generatingLayout {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding: 40px 10px;
+}
+
+.generatingLeft {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.progressRing {
+  --pct: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#0755b9 calc(var(--pct) * 1%), #e1e7f5 0);
+  transition: background 0.3s ease;
+}
+
+.progressRing::before {
+  content: "";
+  position: absolute;
+}
+
+.progressRing span {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: #1a1a2e;
+}
+
+.generatingRight {
+  flex: 1;
+}
+
+.generatingRight h3 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  color: #1a1a2e;
+}
+
+.generatingSub {
+  margin: 0 0 20px 0;
+  color: #64647b;
+  font-size: 14px;
+}
+
+.generatingChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+  padding: 18px 20px;
+  border: 2px solid #e1e7f5;
+  border-radius: 16px;
+  background: #fcfcfd;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  border: 2px solid #d7daf4;
+}
+
+.checkDone { color: #1a1a2e; }
+.checkDone .checkIcon { background: #4c9e3f; border-color: #4c9e3f; color: #ffffff; }
+.checkActive { color: #0755b9; }
+.checkActive .checkIcon { border-color: #0755b9; }
+.checkPending { color: #a0a0b2; }
+
+/* ---- Step 4: settings panels ---- */
+.readonlyPill {
+  padding: 14px 16px;
+  background: #f8f9fc;
+  border-radius: 12px;
+  border: 2px solid #e1e7f5;
+  font-weight: 600;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.settingsPanel {
+  padding: 22px;
+  border: 2px solid #e1e7f5;
+  border-radius: 16px;
+  background: #fcfcfd;
+}
+
+.settingsPanel h4 {
+  margin: 0 0 18px 0;
+  font-size: 15px;
+  color: #0755b9;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggleHint {
+  display: block;
+  font-size: 12px;
+  color: #a0a0b2;
+}
+
+.toggleSwitch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #d7daf4;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.toggleSwitch.toggleOn {
+  background: #4c9e3f;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease;
+}
+
+.toggleSwitch.toggleOn .toggleKnob {
+  transform: translateX(20px);
+}
+
+@media (max-width: 720px) {
+  .generatingLayout { flex-direction: column; text-align: center; }
+  .generatingChecklist { max-width: none; }
+  .settingsGrid { grid-template-columns: 1fr; }
+}

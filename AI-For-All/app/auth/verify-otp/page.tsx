@@ -46,7 +46,7 @@ function mapError(code: string | undefined, message: string): string {
 function VerifyOtpInner() {
   const router = useRouter()
   const params = useSearchParams()
-  const phone = params.get('phone') ?? ''
+  const email = params.get('email') ?? ''
   const isReset = params.get('mode') === 'reset'
 
   const [digits, setDigits] = useState(['', '', '', '', '', ''])
@@ -107,15 +107,15 @@ function VerifyOtpInner() {
   // ── OTP submit ────────────────────────────────────────────────────────────
 
   async function submitOtp(token: string) {
-    if (!phone) { setError('Missing phone number. Please go back and try again.'); return }
+    if (!email) { setError('Missing email address. Please go back and try again.'); return }
     setError('')
     setSubmitting(true)
     try {
       const supabase = createClient()
       const { error: sbError } = await supabase.auth.verifyOtp({
-        phone,
+        email,
         token,
-        type: 'sms',
+        type: 'email',
       })
       if (sbError) {
         setError(mapError((sbError as { code?: string }).code, sbError.message))
@@ -142,13 +142,13 @@ function VerifyOtpInner() {
   // ── Resend ────────────────────────────────────────────────────────────────
 
   async function handleResend() {
-    if (!phone || cooldown > 0) return
+    if (!email || cooldown > 0) return
     setResending(true)
     try {
       const supabase = createClient()
       const { error: sbError } = await supabase.auth.resend({
-        type: 'sms',
-        phone,
+        type: 'signup',
+        email,
       })
       if (sbError) {
         setError(mapError((sbError as { code?: string }).code, sbError.message))
@@ -246,7 +246,7 @@ function VerifyOtpInner() {
 
   // ── Render: OTP entry screen ──────────────────────────────────────────────
 
-  const displayPhone = phone ? formatDisplay(phone) : 'your mobile number'
+  const displayEmail = email || 'your email address'
 
   return (
     <main className="authpage authpage-signup">
@@ -267,7 +267,7 @@ function VerifyOtpInner() {
         </h2>
         <p className="otp-subtitle">
           We sent a 6-digit code to{' '}
-          <strong>{displayPhone}</strong>.
+          <strong>{displayEmail}</strong>.
           {' '}Enter it below.
         </p>
 

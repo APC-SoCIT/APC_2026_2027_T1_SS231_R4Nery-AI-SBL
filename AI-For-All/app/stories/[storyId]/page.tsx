@@ -1,24 +1,52 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Check, Send, Sun } from 'lucide-react'
-import { getStory, storyScripts } from '@/lib/stories'
+import { ArrowLeft, Send, Sun } from 'lucide-react'
+import { fetchStoryById } from '@/lib/supabase/stories'
+import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
 
-type Step = 'splash' | 'scene1' | 'scene2' | 'activity' | 'response' | 'cleared'
+type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
   const router = useRouter()
-  const story = getStory(params.storyId)
-  const script = storyScripts[params.storyId]
 
+  const [story, setStory] = useState<StoryModule | null>(null)
+  const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('splash')
+  const [sceneIndex, setSceneIndex] = useState(0)
+  const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
 
-  if (!story || !script) {
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const found = await fetchStoryById(params.storyId)
+      if (cancelled) return
+      setStory(found)
+      setLoading(false)
+      if (!found) setStep('not-found')
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [params.storyId])
+
+  const session = getMockSession()
+  const isGuest = !session
+
+  if (loading) {
+    return (
+      <main className="story-scene-page">
+        <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
+      </main>
+    )
+  }
+
+  if (!story || step === 'not-found') {
     return (
       <main className="story-scene-page">
         <p style={{ padding: 24 }}>We couldn&apos;t find that story.</p>
@@ -27,6 +55,30 @@ export default function StoryScenePage() {
         </Link>
       </main>
     )
+  }
+
+  const currentScene = story.scenes[sceneIndex]
+  const gatedActivity = story.type === 'with_activity' && isGuest && story.allowFreeText !== false
+  const activityPrompt = score >= 0
+    ? story.activity?.intellectPrompt
+    : story.activity?.otherRoutePrompt
+
+  function choose(weight: number) {
+    if (!story) return
+    setScore((s) => s + weight)
+
+    const isLastScene = sceneIndex >= story.scenes.length - 1
+    if (!isLastScene) {
+      setSceneIndex((i) => i + 1)
+      return
+    }
+
+    // Last scene answered — decide what comes next.
+    if (story.type === 'with_activity') {
+      setStep(gatedActivity ? 'gate' : 'activity')
+    } else {
+      setStep('cleared')
+    }
   }
 
   function submitActivity(e: FormEvent) {
@@ -40,8 +92,16 @@ export default function StoryScenePage() {
         <img src="/ai-for-all/Story-Ai-Mascot.png" alt="" className="story-splash-mascot" />
         <div className="story-splash-card">
           <h2>{story.title}</h2>
-          <p>A story about {story.title.toLowerCase()}.</p>
-          <button type="button" className="stories-cta" onClick={() => setStep('scene1')}>
+          <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
+          <button
+            type="button"
+            className="stories-cta"
+            onClick={() => {
+              setSceneIndex(0)
+              setScore(0)
+              setStep('scene')
+            }}
+          >
             Start Story
           </button>
         </div>
@@ -50,7 +110,7 @@ export default function StoryScenePage() {
   }
 
   if (step === 'cleared') {
-    return <StoryCleared storyId={story.id} />
+    return <StoryCleared story={story} isGuest={isGuest} />
   }
 
   return (
@@ -64,42 +124,51 @@ export default function StoryScenePage() {
 
       <div className="story-scene-avatar">
         <div className="ai-orb">●</div>
-        {(step === 'scene1' || step === 'scene2') && <span className="story-scene-dots">•••</span>}
+        {step === 'scene' && <span className="story-scene-dots">•••</span>}
       </div>
 
-      {step === 'scene1' && (
+      {step === 'scene' && currentScene && (
         <>
-          <div className="story-scene-bubble">{script.scene1.message}</div>
+          <div className="story-scene-bubble">{currentScene.body}</div>
           <div className="story-scene-choices">
-            {script.scene1.choices.map((choice, i) => (
-              <button key={choice} type="button" className="choice-button" onClick={() => setStep('scene2')}>
-                {i + 1}. {choice}
+            {(currentScene.choices || []).slice(0, 2).map((choice, i) => (
+              <button
+                key={choice.id}
+                type="button"
+                className="choice-button"
+                onClick={() => choose(choice.weight)}
+              >
+                {i + 1}. {choice.label}
               </button>
             ))}
           </div>
         </>
       )}
 
-      {step === 'scene2' && (
+      {step === 'gate' && (
         <>
-          <div className="story-scene-bubble">{script.scene2.message}</div>
+          <div className="story-scene-bubble">
+            This story ends with a free-text activity for registered learners. Sign up to unlock it — or skip
+            ahead for now.
+          </div>
           <div className="story-scene-choices">
-            {script.scene2.choices.map((choice, i) => (
-              <button key={choice} type="button" className="choice-button" onClick={() => setStep('activity')}>
-                {i + 1}. {choice}
-              </button>
-            ))}
+            <Link href="/sign-up" className="stories-cta" style={{ textAlign: 'center' }}>
+              Sign Up
+            </Link>
+            <button type="button" className="choice-button" onClick={() => setStep('cleared')}>
+              Skip for now
+            </button>
           </div>
         </>
       )}
 
       {step === 'activity' && (
         <form className="story-activity" onSubmit={submitActivity}>
-          <div className="story-scene-bubble">Try to prompt</div>
+          <div className="story-scene-bubble">{activityPrompt || 'Try to prompt'}</div>
           <div className="story-activity-row">
             <input
               className="story-activity-field"
-              placeholder={script.activityPlaceholder}
+              placeholder="Type your response..."
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
             />
@@ -112,11 +181,12 @@ export default function StoryScenePage() {
 
       {step === 'response' && (
         <>
-          {script.response.map((line) => (
-            <div className="story-scene-bubble" key={line}>
-              {line}
-            </div>
-          ))}
+          <div className="story-scene-bubble">
+            AI is like a little mind that watches, learns, and gets better each time you show it something new.
+          </div>
+          <div className="story-scene-bubble">
+            Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
+          </div>
           <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
             Finish
           </button>
@@ -126,10 +196,7 @@ export default function StoryScenePage() {
   )
 }
 
-function StoryCleared({ storyId }: { storyId: string }) {
-  const session = getMockSession()
-  const isGuest = !session
-
+function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean }) {
   return (
     <main className="story-cleared-page">
       <Sun size={64} className="story-cleared-icon" />
@@ -143,31 +210,35 @@ function StoryCleared({ storyId }: { storyId: string }) {
               Sign Up
             </Link>
           </div>
-          <div className="story-cleared-row">
-            <strong>Want to learn more about AI?</strong>
-            <a href="https://skillsbuild.org" target="_blank" rel="noreferrer" className="secondary-button">
-              IBM SkillsBuild
-            </a>
-          </div>
+          {story.skillsBuildUrl && (
+            <div className="story-cleared-row">
+              <strong>Want to learn more about AI?</strong>
+              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
+                {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+              </a>
+            </div>
+          )}
           <Link href="/" className="text-button story-cleared-backhome">
             Back Home
           </Link>
         </div>
       ) : (
         <div className="story-cleared-card">
-          <div className="story-cleared-row">
-            <strong>Want to learn more about AI?</strong>
-            <a href="https://skillsbuild.org" target="_blank" rel="noreferrer" className="secondary-button">
-              IBM SkillsBuild Link
-            </a>
-          </div>
+          {story.skillsBuildUrl && (
+            <div className="story-cleared-row">
+              <strong>Want to learn more about AI?</strong>
+              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
+                {story.skillsBuildButtonText || 'IBM SkillsBuild Link'}
+              </a>
+            </div>
+          )}
           <div className="story-cleared-row">
             <strong>Explore More Stories</strong>
             <Link href="/stories" className="stories-cta">
               Explore Stories
             </Link>
           </div>
-          <Link href={`/stories/${storyId}`} className="text-button">
+          <Link href={`/stories/${story.id}`} className="text-button">
             Replay this story
           </Link>
           <Link href="/home" className="text-button story-cleared-backhome">
