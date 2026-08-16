@@ -1,16 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BookOpen, ChevronRight, Plus, Trash2, CheckCircle, Clock } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Pencil, Archive, ArchiveRestore, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { StoryModule } from '@/lib/story-data'
-import { fetchAllStories, deleteStoryFromDb, saveStoryToDb } from '@/lib/supabase/stories'
+import { fetchAllStories, saveStoryToDb } from '@/lib/supabase/stories'
 import toast from 'react-hot-toast'
+
+// Cycled swatch colors for stories that don't have a custom color set.
+const SWATCHES = ['#8dcdf4', '#c8ccff', '#ff9d76', '#c7e94e', '#ff766e', '#79a8ff']
+
+type StatusFilter = 'All' | 'Draft' | 'Published' | 'Archived'
 
 export default function AdminStoriesPage() {
   const router = useRouter()
   const [stories, setStories] = useState<StoryModule[]>([])
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const loadStories = async () => {
     setLoading(true)
@@ -23,114 +31,155 @@ export default function AdminStoriesPage() {
     loadStories()
   }, [])
 
-  const handleDelete = async (id: string, title: string) => {
-    if (confirm(`Are you sure you want to delete "${title}"?`)) {
-      try {
-        await deleteStoryFromDb(id)
-        setStories(stories.filter(s => s.id !== id))
-        toast.success(`Story "${title}" deleted successfully`)
-      } catch (err) {
-        toast.error('Failed to delete story')
-      }
+  const stats = useMemo(() => ({
+    total: stories.length,
+    draft: stories.filter(s => s.status === 'Draft').length,
+    published: stories.filter(s => s.status === 'Published').length,
+    archived: stories.filter(s => s.status === 'Archived').length,
+  }), [stories])
+
+  const visibleStories = useMemo(() => {
+    return stories.filter(s => {
+      const matchesStatus = statusFilter === 'All' || s.status === statusFilter
+      const matchesQuery = query.trim() === '' || s.title.toLowerCase().includes(query.trim().toLowerCase())
+      return matchesStatus && matchesQuery
+    })
+  }, [stories, statusFilter, query])
+
+  const handleToggleArchive = async (story: StoryModule) => {
+    const newStatus = story.status === 'Archived' ? 'Published' : 'Archived'
+    try {
+      const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
+      await saveStoryToDb(updated)
+      setStories(stories.map(s => s.id === story.id ? updated : s))
+      toast.success(newStatus === 'Archived' ? `"${story.title}" archived` : `"${story.title}" restored`)
+    } catch {
+      toast.error('Failed to update story')
     }
   }
 
-  const handleToggleStatus = async (story: StoryModule) => {
+  const handleCycleStatus = async (story: StoryModule) => {
+    if (story.status === 'Archived') return // use the archive button to restore
     const newStatus = story.status === 'Published' ? 'Draft' : 'Published'
-    if (confirm(`Are you sure you want to change the status of "${story.title}" to ${newStatus}?`)) {
-      try {
-        const updated = { ...story, status: newStatus as 'Draft' | 'Published', updatedAt: 'Just now' }
-        await saveStoryToDb(updated)
-        setStories(stories.map(s => s.id === story.id ? updated : s))
-        toast.success(`Story status changed to ${newStatus}`)
-      } catch (err) {
-        toast.error(`Failed to change story status to ${newStatus}`)
-      }
+    try {
+      const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
+      await saveStoryToDb(updated)
+      setStories(stories.map(s => s.id === story.id ? updated : s))
+      toast.success(`Story status changed to ${newStatus}`)
+    } catch {
+      toast.error('Failed to change story status')
     }
   }
 
   const handleEdit = (story: StoryModule) => {
-    if (confirm(`Are you sure you want to edit "${story.title}"?`)) {
-      toast.success(`Opening editor for "${story.title}"...`)
-      router.push(`/admin/stories/${story.id}/edit`)
-    }
+    router.push(`/admin/stories/${story.id}/edit`)
   }
 
   return (
-    <section className="admin-panel story-manager">
-      <div className="panel-heading">
-        <div>
-          <h2>Story library ({stories.length})</h2>
-          <p>Create, edit, and publish learning experiences stored in database.</p>
+    <section className="story-manager-v2">
+      {/* Stat cards */}
+      <div className="story-stat-row">
+        <div className="story-stat-card stat-total">
+          <strong>{stats.total}</strong>
+          <span>Total Stories</span>
         </div>
-        <button className="admin-primary small" style={{ width: 'auto' }} onClick={() => router.push('/admin/stories/create')}>
-          <Plus size={16} /> New story
+        <div className="story-stat-card stat-draft">
+          <strong>{stats.draft}</strong>
+          <span>Draft</span>
+        </div>
+        <div className="story-stat-card stat-published">
+          <strong>{stats.published}</strong>
+          <span>Published</span>
+        </div>
+        <div className="story-stat-card stat-archived">
+          <strong>{stats.archived}</strong>
+          <span>Archived</span>
+        </div>
+      </div>
+
+      {/* Search + filter + new story */}
+      <div className="story-toolbar">
+        <div className="story-search">
+          <Search size={16} />
+          <input
+            placeholder="Search stories..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="story-filter-wrap">
+          <button
+            className="story-filter-btn"
+            onClick={() => setFilterOpen(o => !o)}
+            title="Filter by status"
+          >
+            <SlidersHorizontal size={16} />
+          </button>
+          {filterOpen && (
+            <div className="story-filter-menu">
+              {(['All', 'Draft', 'Published', 'Archived'] as StatusFilter[]).map(opt => (
+                <button
+                  key={opt}
+                  className={statusFilter === opt ? 'active' : ''}
+                  onClick={() => { setStatusFilter(opt); setFilterOpen(false) }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button className="admin-primary small" style={{ width: 'auto', marginLeft: 'auto' }} onClick={() => router.push('/admin/stories/create')}>
+          <Plus size={16} /> New Story
         </button>
       </div>
 
-      {loading ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-          Loading stories from database...
-        </div>
-      ) : stories.length === 0 ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-          No stories found. Click <strong>New story</strong> to create one!
-        </div>
-      ) : (
-        stories.map(story => (
-          <div className="admin-story-row" key={story.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', borderBottom: '1px solid #eee' }}>
-            <div className="admin-story-icon" style={{ background: story.type === 'with_activity' ? '#fff0ef' : '#eaf2ff', color: story.type === 'with_activity' ? '#c92a20' : '#0755b9', padding: '0.75rem', borderRadius: '10px' }}>
-              <BookOpen size={20} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <strong style={{ fontSize: '1.05rem' }}>{story.title}</strong>
-                <span style={{
-                  fontSize: '0.72rem',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  background: story.type === 'with_activity' ? '#ffe2df' : '#dbe8ff',
-                  color: story.type === 'with_activity' ? '#90120a' : '#04387d'
-                }}>
-                  {story.type === 'with_activity' ? 'With Activity' : 'Choices Only'}
-                </span>
-              </div>
-              <small style={{ color: '#666' }}>
-                {story.category} · {story.level} · {story.scenes?.length || 0} Scenes · Updated {story.updatedAt || 'Recently'}
-              </small>
-            </div>
-
-            <button
-              onClick={() => handleToggleStatus(story)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <span
-                className={story.status === 'Published' ? 'status-live' : 'status-draft'}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                {story.status === 'Published' ? <><CheckCircle size={12} /> Published</> : <><Clock size={12} /> Draft</>}
-              </span>
-            </button>
-
-            <button
-              onClick={() => handleEdit(story)}
-              style={{ background: '#f0f4ff', border: '1px solid #dbe8ff', borderRadius: '6px', cursor: 'pointer', color: '#0755b9', padding: '0.4rem 0.8rem', fontWeight: 600, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              title="Edit Story"
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() => handleDelete(story.id, story.title)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c92a20', padding: '0.4rem' }}
-              title="Delete Story"
-            >
-              <Trash2 size={18} />
-            </button>
+      {/* Rows */}
+      <div className="story-row-list">
+        {loading ? (
+          <div className="story-empty">Loading stories…</div>
+        ) : visibleStories.length === 0 ? (
+          <div className="story-empty">
+            {stories.length === 0
+              ? <>No stories yet. Click <strong>New Story</strong> to create one!</>
+              : 'No stories match your search or filter.'}
           </div>
-        ))
-      )}
+        ) : (
+          visibleStories.map((story, i) => (
+            <div className="story-row-v2" key={story.id}>
+              <span className="story-swatch" style={{ background: story.color || SWATCHES[i % SWATCHES.length] }} />
+
+              <div className="story-row-info">
+                <strong>{story.title}</strong>
+                <small>{story.category} · {story.level} · {story.scenes?.length || 0} scenes</small>
+              </div>
+
+              <button
+                className={`story-status-pill status-${story.status.toLowerCase()}`}
+                onClick={() => handleCycleStatus(story)}
+                disabled={story.status === 'Archived'}
+                title={story.status === 'Archived' ? 'Archived stories are read-only — restore to change status' : 'Click to toggle Draft/Published'}
+              >
+                {story.status}
+              </button>
+
+              <button className="story-icon-btn" onClick={() => handleEdit(story)} title="Edit story">
+                <Pencil size={16} />
+              </button>
+
+              <button
+                className="story-icon-btn"
+                onClick={() => handleToggleArchive(story)}
+                title={story.status === 'Archived' ? 'Restore story' : 'Archive story'}
+              >
+                {story.status === 'Archived' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
     </section>
   )
 }

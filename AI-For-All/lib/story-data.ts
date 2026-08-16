@@ -29,11 +29,13 @@ export type StoryModule = {
   description?: string
   color?: string
   image?: string
-  status: 'Draft' | 'Published'
+  status: 'Draft' | 'Published' | 'Archived'
   updatedAt?: string
   createdAt?: string
   skillsBuildUrl?: string
   skillsBuildButtonText?: string
+  allowFreeText?: boolean
+  storyFor?: 'all' | 'guests' | 'registered'
   scenes: StoryScene[]
   activity?: StoryActivity
 }

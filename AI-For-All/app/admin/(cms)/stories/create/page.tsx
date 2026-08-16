@@ -1,16 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { StoryModule, StoryScene } from '@/lib/story-data'
 import { saveStoryToDb } from '@/lib/supabase/stories'
 import styles from './create.module.css'
+import { GeneratingMascot } from './GeneratingMascot'
+
+const GEN_CHECKLIST = [
+  { label: 'Understanding your inputs', at: 15 },
+  { label: 'Planning the story structure', at: 45 },
+  { label: 'Writing scenes and dialogues', at: 75 },
+  { label: 'Finalizing choices', at: 100 },
+]
 
 export default function CreateStoryWizard() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [progress, setProgress] = useState(0)
+
+  // Fake-but-smooth progress bar while the AI request is in flight.
+  // Creeps up to 90% on its own; handleGenerateStory jumps it to 100
+  // once the real response has actually arrived.
+  useEffect(() => {
+    if (step !== 2 || !loading) return
+    setProgress(0)
+    let value = 0
+    const timer = setInterval(() => {
+      value = Math.min(90, value + Math.random() * 14 + 6)
+      setProgress(Math.round(value))
+    }, 350)
+    return () => clearInterval(timer)
+  }, [step, loading])
 
   // Step 1 Form State
   const [title, setTitle] = useState('')
@@ -28,6 +51,8 @@ export default function CreateStoryWizard() {
   const [status, setStatus] = useState<'Draft' | 'Published'>('Published')
   const [skillsBuildUrl, setSkillsBuildUrl] = useState('https://skillsbuild.org')
   const [skillsBuildButtonText, setSkillsBuildButtonText] = useState('Explore IBM Course')
+  const [allowFreeText, setAllowFreeText] = useState(true)
+  const [storyFor, setStoryFor] = useState<'all' | 'guests' | 'registered'>('all')
 
   // Trigger AI Story Generation
   const handleGenerateStory = async () => {
@@ -55,6 +80,8 @@ export default function CreateStoryWizard() {
       console.error('Error generating story:', err)
     } finally {
       setLoading(false)
+      setProgress(100)
+      await new Promise(r => setTimeout(r, 500))
       setStep(3)
     }
   }
@@ -88,6 +115,8 @@ export default function CreateStoryWizard() {
       status,
       skillsBuildUrl,
       skillsBuildButtonText,
+      allowFreeText,
+      storyFor,
       updatedAt: 'Just now',
       createdAt: new Date().toISOString(),
     }
@@ -251,18 +280,28 @@ export default function CreateStoryWizard() {
 
         {/* STEP 2: GENERATING VIEW */}
         {step === 2 && (
-          <div className={styles.generatingContainer}>
-            <div className={styles.pulseOrb}></div>
-            <h3 style={{ margin: '0 0 20px 0', color: '#1a1a2e' }}>Conjuring the narrative...</h3>
-            <div className={styles.generatingSteps}>
-              <div className={`${styles.genStep} ${styles.done}`}>
-                <span className={styles.genStepIcon}>✓</span> Parsing concept: {concept || title || 'AI Basics'}
+          <div className={styles.generatingLayout}>
+            <div className={styles.generatingLeft}>
+              <GeneratingMascot />
+              <div className={styles.progressRing} style={{ ['--pct' as any]: progress }}>
+                <span>{progress}%</span>
               </div>
-              <div className={`${styles.genStep} ${styles.active}`}>
-                <span className={styles.genStepIcon}>...</span> Structuring {sceneCount} scenes with tap choices...
-              </div>
-              <div className={`${styles.genStep} ${styles.pending}`}>
-                <span className={styles.genStepIcon}>-</span> {storyType === 'with_activity' ? 'Generating Route Activity prompts' : 'Finalizing story structure'}
+            </div>
+
+            <div className={styles.generatingRight}>
+              <h3>Generating your Story</h3>
+              <p className={styles.generatingSub}>Our AI is generating an engaging story</p>
+              <div className={styles.generatingChecklist}>
+                {GEN_CHECKLIST.map(item => {
+                  const done = progress >= item.at
+                  const active = !done && progress >= (GEN_CHECKLIST[GEN_CHECKLIST.indexOf(item) - 1]?.at ?? 0)
+                  return (
+                    <div key={item.label} className={`${styles.checkItem} ${done ? styles.checkDone : active ? styles.checkActive : styles.checkPending}`}>
+                      <span className={styles.checkIcon}>{done ? '✓' : ''}</span>
+                      {item.label}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -388,51 +427,79 @@ export default function CreateStoryWizard() {
         {/* STEP 4: FINAL SETTINGS */}
         {step === 4 && (
           <div>
-             <h3 style={{ margin: '0 0 20px 0' }}>Review details before publishing</h3>
-             <div className={styles.row}>
-               <div className={styles.col}>
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Publishing Status</label>
-                    <select className={styles.selectInput} value={status} onChange={e => setStatus(e.target.value as any)}>
-                      <option value="Published">Published (Live to learners)</option>
-                      <option value="Draft">Draft (Hidden)</option>
-                    </select>
+            <div className={styles.row} style={{ marginBottom: '24px' }}>
+              <div className={styles.col}>
+                <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.inputLabel}>Publishing Status</label>
+                  <select className={styles.selectInput} value={status} onChange={e => setStatus(e.target.value as any)}>
+                    <option value="Published">Published (Live to learners)</option>
+                    <option value="Draft">Draft (Hidden)</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.col}>
+                <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.inputLabel}>Story Flow Type</label>
+                  <div className={styles.readonlyPill}>
+                    {storyType === 'with_activity' ? 'With End Activity' : 'Tap Choices Only'}
                   </div>
-               </div>
-               <div className={styles.col}>
-                 <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Story Flow Type</label>
-                    <div style={{ padding: '14px 16px', background: '#f8f9fc', borderRadius: '12px', border: '2px solid #e1e7f5', fontWeight: 600 }}>
-                      {storyType === 'with_activity' ? 'With End Activity' : 'Tap Choices Only'}
-                    </div>
-                  </div>
-               </div>
-             </div>
+                </div>
+              </div>
+            </div>
 
-             <div className={styles.row} style={{ marginTop: '20px' }}>
-                <div className={styles.col}>
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>IBM SkillsBuild URL</label>
-                    <input 
-                      className={styles.textInput}
-                      value={skillsBuildUrl} 
-                      onChange={e => setSkillsBuildUrl(e.target.value)} 
-                      placeholder="https://skillsbuild.org"
-                    />
+            <div className={styles.settingsGrid}>
+              <div className={styles.settingsPanel}>
+                <h4>Permissions</h4>
+
+                <div className={styles.toggleRow}>
+                  <div>
+                    <label className={styles.inputLabel} style={{ marginBottom: '2px' }}>Free Text AI Response</label>
+                    <span className={styles.toggleHint}>For registered users only</span>
                   </div>
+                  <button
+                    type="button"
+                    className={`${styles.toggleSwitch} ${allowFreeText ? styles.toggleOn : ''}`}
+                    onClick={() => setAllowFreeText(v => !v)}
+                    aria-pressed={allowFreeText}
+                  >
+                    <span className={styles.toggleKnob} />
+                  </button>
                 </div>
-                <div className={styles.col}>
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Button Text</label>
-                    <input 
-                      className={styles.textInput}
-                      value={skillsBuildButtonText} 
-                      onChange={e => setSkillsBuildButtonText(e.target.value)} 
-                      placeholder="Take Course"
-                    />
-                  </div>
+
+                <div className={styles.inputGroup} style={{ marginTop: '20px', marginBottom: 0 }}>
+                  <label className={styles.inputLabel}>Story For:</label>
+                  <select className={styles.selectInput} value={storyFor} onChange={e => setStoryFor(e.target.value as any)}>
+                    <option value="all">Everyone (Guests + Registered)</option>
+                    <option value="guests">Guests Only</option>
+                    <option value="registered">Registered Users Only</option>
+                  </select>
                 </div>
-             </div>
+              </div>
+
+              <div className={styles.settingsPanel}>
+                <h4>IBM SkillsBuild Link</h4>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>URL</label>
+                  <input
+                    className={styles.textInput}
+                    value={skillsBuildUrl}
+                    onChange={e => setSkillsBuildUrl(e.target.value)}
+                    placeholder="https://skillsbuild.org"
+                  />
+                </div>
+
+                <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.inputLabel}>Button Text</label>
+                  <input
+                    className={styles.textInput}
+                    value={skillsBuildButtonText}
+                    onChange={e => setSkillsBuildButtonText(e.target.value)}
+                    placeholder="Take Course"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
