@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { isMockEmail, mockSignIn, shouldUseMockAuth } from '@/lib/mock-auth'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -18,6 +19,19 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError(null)
     try {
+      const useMock = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || shouldUseMockAuth() || isMockEmail(email)
+      if (useMock) {
+        const result = mockSignIn(email, password)
+        if (!result.ok) {
+          throw new Error(result.error)
+        }
+        if (result.user.role !== 'admin') {
+          throw new Error('This account does not have admin access.')
+        }
+        router.push('/admin/dashboard')
+        return
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password

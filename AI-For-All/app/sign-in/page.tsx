@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
 import { GoogleIcon } from '@/components/auth/social-icons'
 import { createClient } from '@/lib/supabase/client'
-import { mockSignIn } from '@/lib/mock-auth'
+import { isMockEmail, mockSignIn, shouldUseMockAuth } from '@/lib/mock-auth'
 
 const SUPABASE_ERRORS: Record<string, string> = {
   invalid_credentials: 'Incorrect email or password.',
@@ -50,7 +50,8 @@ export default function SignInPage() {
 
     setSubmitting(true)
     try {
-      if (!SUPABASE_CONFIGURED) {
+      const useMock = !SUPABASE_CONFIGURED || shouldUseMockAuth() || isMockEmail(trimmedEmail)
+      if (useMock) {
         const result = mockSignIn(trimmedEmail, password)
         if (!result.ok) { setError(result.error); return }
         router.push(result.user.role === 'admin' ? '/admin' : '/home')
@@ -81,7 +82,13 @@ export default function SignInPage() {
       setError('Enter your email above first, then tap "Forgot password?".')
       return
     }
-    if (!SUPABASE_CONFIGURED) return
+    if (!SUPABASE_CONFIGURED && !shouldUseMockAuth() && !isMockEmail(trimmedEmail)) return
+
+    if (shouldUseMockAuth() || isMockEmail(trimmedEmail)) {
+      setResetSent(true)
+      router.push(`/auth/verify-otp?email=${encodeURIComponent(trimmedEmail)}&mode=reset`)
+      return
+    }
 
     const supabase = createClient()
     const { error: sbError } = await supabase.auth.signInWithOtp({ email: trimmedEmail })

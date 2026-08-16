@@ -9,6 +9,17 @@ const MOCK_ACCOUNTS: MockAccount[] = [
 
 const STORAGE_KEY = 'ai-for-all:mock-session'
 
+export function isMockEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase()
+  return MOCK_ACCOUNTS.some((account) => account.email.toLowerCase() === normalized)
+}
+
+export function shouldUseMockAuth(): boolean {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1' || host.startsWith('localhost.')
+}
+
 export function mockSignIn(email: string, password: string): { ok: true; user: MockUser } | { ok: false; error: string } {
   const match = MOCK_ACCOUNTS.find(
     (a) => a.email.toLowerCase() === email.trim().toLowerCase() && a.password === password
