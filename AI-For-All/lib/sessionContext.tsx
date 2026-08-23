@@ -48,18 +48,20 @@ const SessionContext = createContext<SessionContextValue>({
 function deriveAuthMethod(user: User): UserSession['authMethod'] {
   if (!user.identities || user.identities.length === 0) return null
   const provider = user.identities[0].provider
-  if (provider === 'phone') return 'phone'
   if (provider === 'google') return 'google'
-  return null
+  if (provider === 'email') return 'email'
+  return 'email' // default for any other email-based provider
 }
 
 function buildSession(user: User): UserSession {
+  const isGuest = user.is_anonymous ?? false
   return {
-    sessionId: user.id, // reuse uid as session id for simplicity
+    sessionId: user.id,
     userId: user.id,
-    isGuest: user.is_anonymous ?? false,
+    isGuest,
+    role: isGuest ? 'guest' : 'user',
     authMethod: deriveAuthMethod(user),
-    phoneVerified: user.phone_confirmed_at !== null && user.phone_confirmed_at !== undefined,
+    emailVerified: user.email_confirmed_at !== null && user.email_confirmed_at !== undefined,
     completedModules: [],
     totalPoints: 0,
     unlockedBadges: [],
