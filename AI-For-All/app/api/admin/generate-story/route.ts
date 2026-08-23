@@ -74,112 +74,62 @@ Return ONLY valid JSON matching this exact structure:
         const json = await res.json();
         const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          const parsed = JSON.parse(rawText);
-          return NextResponse.json({ story: parsed });
+          try {
+            const parsed = JSON.parse(rawText);
+            return NextResponse.json({ story: parsed });
+          } catch (e) {
+            console.error('[AI Story Gen] Failed to parse Gemini response:', rawText);
+            return NextResponse.json({ error: 'Failed to parse AI response from Gemini' }, { status: 500 });
+          }
         }
+      } else {
+        const errorText = await res.text();
+        console.error('[AI Story Gen] Gemini API error:', errorText);
+        return NextResponse.json({ error: 'Failed to generate story from Gemini API' }, { status: 500 });
       }
+    } else if (process.env.GROQ_API_KEY) {
+      const url = 'https://api.groq.com/openai/v1/chat/completions';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [{ role: 'user', content: systemPrompt }],
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const rawText = json.choices?.[0]?.message?.content;
+        if (rawText) {
+          try {
+            const parsed = JSON.parse(rawText);
+            return NextResponse.json({ story: parsed });
+          } catch (e) {
+            console.error('[AI Story Gen] Failed to parse Groq response:', rawText);
+            return NextResponse.json({ error: 'Failed to parse AI response from Groq' }, { status: 500 });
+          }
+        }
+      } else {
+        const errorText = await res.text();
+        console.error('[AI Story Gen] Groq API error:', errorText);
+        return NextResponse.json({ error: 'Failed to generate story from Groq API' }, { status: 500 });
+      }
+    } else {
+      return NextResponse.json({ error: 'No API key configured for AI generation.' }, { status: 500 });
     }
 
-    // Fallback AI Story Generator if API Key is rate limited or missing
-    const generatedStory = createSmartFallbackStory({ title, concept, genre, type, sceneCount });
-    return NextResponse.json({ story: generatedStory });
+    return NextResponse.json({ error: 'Empty response from AI.' }, { status: 500 });
 
   } catch (err: any) {
-    console.warn('[AI Story Gen] Using template generator fallback due to error:', err?.message);
-    const body = await request.clone().json().catch(() => ({}));
-    const generatedStory = createSmartFallbackStory(body);
-    return NextResponse.json({ story: generatedStory });
+    console.error('[AI Story Gen] Error during generation:', err?.message);
+    return NextResponse.json({ error: err?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
 
-function createSmartFallbackStory(params: any) {
-  const { title = 'The AI Quest', concept = 'Machine Learning', type = 'choices_only', sceneCount = 3 } = params;
 
-  // Real-world scenario templates for the fallback generator
-  const scenarioTemplates = [
-    {
-      eyebrowTag: 'THE SETUP',
-      titleTemplate: (c: string) => `Discovering ${c} in Action`,
-      bodyTemplate: (c: string) => `You are a student interning at a local community health center. The clinic receives hundreds of patient records daily, and the staff is overwhelmed. Your supervisor asks you to explore how ${c} could help organize and prioritize patient cases more efficiently.`,
-      choiceA: `Gather and label existing patient data to train a classification model (+1 Intellect)`,
-      choiceB: `Brainstorm creative AI-powered triage ideas with the medical staff (-1 Creative)`,
-    },
-    {
-      eyebrowTag: 'DECISION POINT',
-      titleTemplate: (c: string) => `Applying ${c} to Real Data`,
-      bodyTemplate: (c: string) => `After initial research, you realize the clinic's data has inconsistencies — some records are incomplete and others use different formats. You need to decide how to prepare this data before applying ${c} techniques.`,
-      choiceA: `Clean and standardize the dataset using systematic rules (+1 Intellect)`,
-      choiceB: `Experiment with the raw data and see what patterns emerge (-1 Creative)`,
-    },
-    {
-      eyebrowTag: 'TESTING',
-      titleTemplate: (c: string) => `Testing Your ${c} Solution`,
-      bodyTemplate: (c: string) => `Your prototype is ready for testing. The clinic nurses try using your ${c} tool during a busy Monday morning. Some love it, but others find it confusing. You need to decide how to improve the system based on their feedback.`,
-      choiceA: `Collect structured feedback surveys and analyze common pain points (+1 Intellect)`,
-      choiceB: `Shadow the nurses for a day and redesign the interface based on observation (-1 Creative)`,
-    },
-    {
-      eyebrowTag: 'SCALING UP',
-      titleTemplate: (c: string) => `Expanding ${c} Impact`,
-      bodyTemplate: (c: string) => `Your tool is working well at the clinic. The barangay captain hears about it and asks if you could adapt your ${c} solution for the local health office to serve multiple barangays in the area.`,
-      choiceA: `Design a modular system architecture that can handle multiple locations (+1 Intellect)`,
-      choiceB: `Create a simplified version first and let each barangay customize it (-1 Creative)`,
-    },
-    {
-      eyebrowTag: 'CONCLUSION',
-      titleTemplate: (c: string) => `The Future of ${c}`,
-      bodyTemplate: (c: string) => `Your project is a success. The Department of Health notices your work and invites you to present how ${c} improved community healthcare. You reflect on the journey and what made your approach effective.`,
-      choiceA: `Present data-driven results showing measurable improvements (+1 Intellect)`,
-      choiceB: `Share personal stories from patients and nurses whose lives improved (-1 Creative)`,
-    },
-  ];
-
-  const scenes = [];
-  const count = Math.max(1, Math.min(5, Number(sceneCount) || 3));
-
-  for (let i = 0; i < count; i++) {
-    const template = scenarioTemplates[i % scenarioTemplates.length];
-    scenes.push({
-      id: `scene-${i + 1}`,
-      eyebrow: `SCENE ${i + 1} · ${template.eyebrowTag}`,
-      title: template.titleTemplate(concept),
-      body: template.bodyTemplate(concept),
-      choices: [
-        {
-          id: `c${i + 1}-a`,
-          label: template.choiceA,
-          weight: 1
-        },
-        {
-          id: `c${i + 1}-b`,
-          label: template.choiceB,
-          weight: -1
-        }
-      ]
-    });
-  }
-
-  return {
-    id: `story-${Date.now()}`,
-    title: title || `Exploring ${concept}`,
-    category: concept || 'AI Basics',
-    level: 'Starter',
-    type: type === 'with_activity' ? 'with_activity' : 'choices_only',
-    description: `An interactive story where you apply ${concept} to solve real-world problems in a community health center.`,
-    color: '#79a8ff',
-    image: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design%20%2889%29%201-VY50vMtptXr0tOsB2AUUCKt4I96OmQ.png',
-    status: 'Published',
-    updatedAt: 'Just now',
-    createdAt: new Date().toISOString(),
-    skillsBuildUrl: 'https://skillsbuild.org',
-    skillsBuildButtonText: 'Explore Course on IBM SkillsBuild',
-    scenes,
-    ...(type === 'with_activity' ? {
-      activity: {
-        intellectPrompt: `Intellect Route Activity: You've been asked to present your ${concept} project to a panel of health officials. Write a 3-step plan explaining how you would implement your AI solution in another community, including what data you'd collect and how you'd measure success.`,
-        otherRoutePrompt: `Creative Route Activity: Imagine you're designing an AI-powered health assistant app for senior citizens in your barangay. Describe what features it would have, how it would use ${concept}, and how you'd make it easy for lolas and lolos to use.`
-      }
-    } : {})
-  };
-}
 

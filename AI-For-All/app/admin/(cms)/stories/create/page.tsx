@@ -20,6 +20,7 @@ export default function CreateStoryWizard() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [genError, setGenError] = useState<string | null>(null)
 
   // Fake-but-smooth progress bar while the AI request is in flight.
   // Creeps up to 90% on its own; handleGenerateStory jumps it to 100
@@ -58,6 +59,7 @@ export default function CreateStoryWizard() {
   const handleGenerateStory = async () => {
     setStep(2)
     setLoading(true)
+    setGenError(null)
 
     try {
       const res = await fetch('/api/admin/generate-story', {
@@ -73,16 +75,24 @@ export default function CreateStoryWizard() {
       })
 
       const data = await res.json()
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `API returned status ${res.status}`)
+      }
       if (data.story) {
         setGeneratedStory(data.story)
+        setLoading(false)
+        setProgress(100)
+        await new Promise(r => setTimeout(r, 500))
+        setStep(3)
+      } else {
+        throw new Error('No story data in response')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating story:', err)
-    } finally {
+      setGenError(err?.message || 'Failed to generate story. Please try again.')
       setLoading(false)
-      setProgress(100)
-      await new Promise(r => setTimeout(r, 500))
-      setStep(3)
+      setProgress(0)
+      setStep(1)
     }
   }
 
@@ -186,6 +196,23 @@ export default function CreateStoryWizard() {
         {/* STEP 1: OPTIONS & BASIC INFO */}
         {step === 1 && (
           <div>
+            {genError && (
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                color: '#991b1b',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '18px' }}>⚠️</span>
+                <span><strong>Generation failed:</strong> {genError}</span>
+              </div>
+            )}
             <div className={styles.row}>
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
