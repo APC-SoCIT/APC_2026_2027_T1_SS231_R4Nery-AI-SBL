@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Sun } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
-import { getMockSession } from '@/lib/mock-auth'
+import { useSession } from '@/lib/sessionContext'
+import { SignupPrompt } from '@/components/auth/signup-prompt'
 
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
 
@@ -35,14 +36,32 @@ export default function StoryScenePage() {
     }
   }, [params.storyId])
 
-  const session = getMockSession()
-  const isGuest = !session
+  const { session } = useSession()
+  const isGuest = !session || session.role === 'guest'
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false)
+
+  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
+  useEffect(() => {
+    if (step === 'cleared' && isGuest) {
+      setShowSignupPrompt(true)
+    }
+  }, [step, isGuest])
 
   if (loading) {
     return (
       <main className="story-scene-page">
         <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
       </main>
+    )
+  }
+
+  // Render the cleared screen (outside the scene layout)
+  if (step === 'cleared' && story) {
+    return (
+      <>
+        <StoryCleared story={story} isGuest={isGuest} />
+        <SignupPrompt open={showSignupPrompt} onDismiss={() => setShowSignupPrompt(false)} />
+      </>
     )
   }
 
@@ -109,9 +128,7 @@ export default function StoryScenePage() {
     )
   }
 
-  if (step === 'cleared') {
-    return <StoryCleared story={story} isGuest={isGuest} />
-  }
+
 
   return (
     <main className="story-scene-page">
@@ -206,8 +223,12 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
         <div className="story-cleared-card">
           <div className="story-cleared-row">
             <strong>Unlock more stories!</strong>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+              Create a free account to save your progress and earn badges.
+            </p>
+            {/* Primary CTA — links to sign-up; SignupPrompt sheet opens automatically */}
             <Link href="/sign-up" className="stories-cta">
-              Sign Up
+              Sign Up Free
             </Link>
           </div>
           {story.skillsBuildUrl && (
