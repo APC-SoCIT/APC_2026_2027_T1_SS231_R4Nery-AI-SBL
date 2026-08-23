@@ -287,3 +287,18 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
   .story-toolbar { flex-wrap:wrap; }
   .story-search { max-width:none; order:1; flex:1 1 100%; }
 }
+/* ─── Account pages (/account/profile, /account/security) ─────────────────── */
+.acct-back { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; margin-bottom:12px; border-radius:12px; background:rgba(255,255,255,.7); color:var(--apc-navy-deep); text-decoration:none; }
+.acct-form { display:grid; gap:14px; }
+.acct-label { display:grid; gap:6px; }
+.acct-label-text { color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.04em; }
+.acct-input { width:100%; min-height:50px; padding:0 16px; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--ink); font-size:14px; transition:border-color .15s; }
+.acct-input:focus { outline:none; border-color:var(--apc-blue); }
+.acct-input:disabled { background:#f4f5fb; color:var(--muted); cursor:not-allowed; }
+.acct-nav-row { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; background:#fff; text-decoration:none; color:inherit; box-shadow:0 4px 14px rgba(23,36,74,.05); }
+.acct-nav-icon { display:grid; place-items:center; width:36px; height:36px; border-radius:10px; flex:none; }
+.acct-nav-label { flex:1; }
+.acct-nav-label strong { display:block; font-size:14px; }
+.acct-nav-label small { display:block; color:var(--muted); font-size:12px; }
+.acct-section { padding:18px; border-radius:18px; background:#fff; box-shadow:0 4px 14px rgba(23,36,74,.05); }
+.acct-section-heading { display:flex; align-items:center; gap:8px; color:var(--ink); font-size:13px; font-weight:800; margin-bottom:14px; }
