@@ -35,11 +35,17 @@ export default function SignUpPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  const passwordsMatch = confirmPassword === '' || password === confirmPassword
   const ready =
-    name.trim().length > 0 && email.trim().length > 0 && password.length > 0
+    name.trim().length > 0 &&
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    confirmPassword.length > 0 &&
+    password === confirmPassword
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -51,6 +57,7 @@ export default function SignUpPage() {
       return
     }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (password !== confirmPassword) { setError('Passwords do not match.'); return }
 
     setSubmitting(true)
     try {
@@ -141,6 +148,22 @@ export default function SignUpPage() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
         />
+
+        <label className="sr-only" htmlFor="signup-confirm-password">
+          Confirm Password
+        </label>
+        <input
+          id="signup-confirm-password"
+          className={`authpage-field${!passwordsMatch ? ' authpage-field--error' : ''}`}
+          type="password"
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+        {!passwordsMatch && (
+          <p className="authpage-field-hint" role="alert">Passwords don&apos;t match.</p>
+        )}
 
         {error && (
           <p className="authpage-error" role="alert">
