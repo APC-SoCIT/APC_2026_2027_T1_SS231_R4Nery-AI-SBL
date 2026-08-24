@@ -91,11 +91,13 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .authpage-body h2 { font-size:clamp(26px,7vw,32px); font-weight:800; line-height:1.15; letter-spacing:-.02em; margin-bottom:22px; }
 .authpage-signup .authpage-body h2 { color:#fff; }
 .authpage-signin .authpage-body h2 { color:var(--apc-navy-deep); }
-.authpage-field { display:block; width:100%; min-height:54px; margin-bottom:14px; padding:0 18px; border:0; border-radius:16px; background:var(--apc-field); color:#fff; font-size:15px; }
+.authpage-field { display:block; width:100%; min-height:54px; margin-bottom:14px; padding:0 18px; border:2px solid transparent; border-radius:16px; background:var(--apc-field); color:#fff; font-size:15px; }
 .authpage-field::placeholder { color:rgba(255,255,255,.85); }
+.authpage-field--error { border-color:#ff6b6b !important; }
 .authpage-error { margin:-4px 0 12px; font-size:12px; }
-.authpage-signup .authpage-error { color:#ffd7d2; }
-.authpage-signin .authpage-error { color:#a3231d; }
+.authpage-field-hint { margin:-8px 0 10px; font-size:12px; font-weight:600; }
+.authpage-signup .authpage-error, .authpage-signup .authpage-field-hint { color:#ffd7d2; }
+.authpage-signin .authpage-error, .authpage-signin .authpage-field-hint { color:#a3231d; }
 .authpage-links { margin:0 0 12px; text-align:center; font-size:12px; }
 .authpage-signup .authpage-links { color:rgba(255,255,255,.92); }
 .authpage-signin .authpage-links { color:var(--apc-navy-deep); }
