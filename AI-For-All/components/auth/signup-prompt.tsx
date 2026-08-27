@@ -99,7 +99,7 @@ export function SignupPrompt({ open, onDismiss }: SignupPromptProps) {
           className="signup-prompt-phone"
           onClick={() => router.push('/sign-up')}
         >
-          Sign up with mobile number
+          Sign up with email
         </button>
 
         <button

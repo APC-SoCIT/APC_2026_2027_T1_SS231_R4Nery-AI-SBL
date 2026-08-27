@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Sun } from 'lucide-react'
+import { ArrowLeft, Send, Sun, Lock, BookOpen, Star } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
 import { trackStoryPresence } from '@/lib/supabase/presence'
+import { useSession } from '@/lib/sessionContext'
+import { SignupPrompt } from '@/components/auth/signup-prompt'
 
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
 
@@ -49,12 +51,32 @@ export default function StoryScenePage() {
 
   const session = getMockSession()
   const isGuest = !session
+  const { session } = useSession()
+  const isGuest = !session || session.role === 'guest'
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false)
+
+  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
+  useEffect(() => {
+    if (step === 'cleared' && isGuest) {
+      setShowSignupPrompt(true)
+    }
+  }, [step, isGuest])
 
   if (loading) {
     return (
       <main className="story-scene-page">
         <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
       </main>
+    )
+  }
+
+  // Render the cleared screen (outside the scene layout)
+  if (step === 'cleared' && story) {
+    return (
+      <>
+        <StoryCleared story={story} isGuest={isGuest} />
+        <SignupPrompt open={showSignupPrompt} onDismiss={() => setShowSignupPrompt(false)} />
+      </>
     )
   }
 
@@ -121,9 +143,7 @@ export default function StoryScenePage() {
     )
   }
 
-  if (step === 'cleared') {
-    return <StoryCleared story={story} isGuest={isGuest} />
-  }
+
 
   return (
     <main className="story-scene-page">
@@ -211,53 +231,105 @@ export default function StoryScenePage() {
 function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean }) {
   return (
     <main className="story-cleared-page">
-      <Sun size={64} className="story-cleared-icon" />
-      <h1>STORY CLEARED</h1>
+      {/* Sunburst rays */}
+      <div className="story-cleared-sunburst" aria-hidden="true">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <span key={i} className="story-cleared-ray" style={{ '--ray-index': i } as React.CSSProperties} />
+        ))}
+      </div>
 
-      {isGuest ? (
-        <div className="story-cleared-card">
-          <div className="story-cleared-row">
-            <strong>Unlock more stories!</strong>
-            <Link href="/sign-up" className="stories-cta">
-              Sign Up
-            </Link>
-          </div>
-          {story.skillsBuildUrl && (
-            <div className="story-cleared-row">
-              <strong>Want to learn more about AI?</strong>
-              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
-                {story.skillsBuildButtonText || 'IBM SkillsBuild'}
-              </a>
-            </div>
-          )}
-          <Link href="/" className="text-button story-cleared-backhome">
-            Back Home
-          </Link>
+      {/* Glowing sun hero */}
+      <div className="story-cleared-sun-wrap" aria-hidden="true">
+        <div className="story-cleared-sun-glow" />
+        <div className="story-cleared-sun-core">
+          <Sun size={56} strokeWidth={1.5} />
         </div>
-      ) : (
-        <div className="story-cleared-card">
-          {story.skillsBuildUrl && (
-            <div className="story-cleared-row">
-              <strong>Want to learn more about AI?</strong>
-              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
-                {story.skillsBuildButtonText || 'IBM SkillsBuild Link'}
-              </a>
+        {/* Sparkles */}
+        <span className="story-cleared-spark story-cleared-spark--1">✦</span>
+        <span className="story-cleared-spark story-cleared-spark--2">✦</span>
+        <span className="story-cleared-spark story-cleared-spark--3">·</span>
+        <span className="story-cleared-spark story-cleared-spark--4">·</span>
+      </div>
+
+      <h1 className="story-cleared-title">Story Cleared!</h1>
+
+      <div className="story-cleared-card">
+        {isGuest ? (
+          <>
+            {/* Row 1: Unlock */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
+                <Lock size={20} />
+              </div>
+              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
+              <Link href="/sign-up" className="story-cleared-btn">
+                Sign Up
+              </Link>
             </div>
-          )}
-          <div className="story-cleared-row">
-            <strong>Explore More Stories</strong>
-            <Link href="/stories" className="stories-cta">
-              Explore Stories
+
+            <div className="story-cleared-divider" />
+
+            {/* Row 2: IBM SkillsBuild */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                <BookOpen size={20} />
+                <Star size={10} className="story-cleared-book-star" />
+              </div>
+              <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+              {story.skillsBuildUrl ? (
+                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                </a>
+              ) : (
+                <Link href="/stories" className="story-cleared-btn">
+                  Explore Stories
+                </Link>
+              )}
+            </div>
+
+            <Link href="/" className="story-cleared-back">
+              Back
             </Link>
-          </div>
-          <Link href={`/stories/${story.id}`} className="text-button">
-            Replay this story
-          </Link>
-          <Link href="/home" className="text-button story-cleared-backhome">
-            Back Home
-          </Link>
-        </div>
-      )}
+          </>
+        ) : (
+          <>
+            {/* Row 1: Sign Up */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
+                <Lock size={20} />
+              </div>
+              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
+              <Link href="/sign-up" className="story-cleared-btn">
+                Sign Up
+              </Link>
+            </div>
+
+            <div className="story-cleared-divider" />
+
+            {/* Row 2: Story / IBM SkillsBuild */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                <BookOpen size={20} />
+                <Star size={10} className="story-cleared-book-star" />
+              </div>
+              <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+              {story.skillsBuildUrl ? (
+                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  Story
+                </a>
+              ) : (
+                <Link href={`/stories/${story.id}`} className="story-cleared-btn">
+                  Story
+                </Link>
+              )}
+            </div>
+
+            <Link href="/home" className="story-cleared-back">
+              Back
+            </Link>
+          </>
+        )}
+      </div>
     </main>
   )
 }
