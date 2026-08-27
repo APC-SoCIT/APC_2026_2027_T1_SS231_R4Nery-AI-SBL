@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { fetchAllStories } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
+import { getMockSession } from '@/lib/mock-auth'
 
 const GUEST_STORY_KEY = 'ai-for-all:guest-story'
 
@@ -154,9 +155,12 @@ export default function StoriesPage() {
     router.push(`/stories/${cards[active].id}`)
   }
 
+  const session = typeof window !== 'undefined' ? getMockSession() : null
+  const backHref = session ? '/home' : '/get-started'
+
   return (
     <main className="stories-page">
-      <Link href="/get-started" className="stories-back" aria-label="Go back">
+      <Link href={backHref} className="stories-back" aria-label="Go back">
         <ArrowLeft size={18} />
       </Link>
 

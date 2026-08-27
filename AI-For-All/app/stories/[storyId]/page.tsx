@@ -1,10 +1,10 @@
 'use client'
-
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send, Sun, Lock, BookOpen, Star } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
+import { trackStoryPresence } from '@/lib/supabase/presence'
 import { StoryModule } from '@/lib/story-data'
 import { useSession } from '@/lib/sessionContext'
 import { SignupPrompt } from '@/components/auth/signup-prompt'
@@ -14,13 +14,13 @@ type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
   const router = useRouter()
-
   const [story, setStory] = useState<StoryModule | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('splash')
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  const presenceCleanup = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -35,6 +35,16 @@ export default function StoryScenePage() {
       cancelled = true
     }
   }, [params.storyId])
+
+  // Track presence while the learner is on this story page
+  useEffect(() => {
+    if (!story || !params.storyId) return
+    presenceCleanup.current = trackStoryPresence(params.storyId)
+    return () => {
+      presenceCleanup.current?.()
+      presenceCleanup.current = null
+    }
+  }, [story, params.storyId])
 
   const { session } = useSession()
   const isGuest = !session || session.role === 'guest'
@@ -85,13 +95,11 @@ export default function StoryScenePage() {
   function choose(weight: number) {
     if (!story) return
     setScore((s) => s + weight)
-
     const isLastScene = sceneIndex >= story.scenes.length - 1
     if (!isLastScene) {
       setSceneIndex((i) => i + 1)
       return
     }
-
     // Last scene answered — decide what comes next.
     if (story.type === 'with_activity') {
       setStep(gatedActivity ? 'gate' : 'activity')
@@ -128,8 +136,6 @@ export default function StoryScenePage() {
     )
   }
 
-
-
   return (
     <main className="story-scene-page">
       <div className="story-scene-header">
@@ -138,12 +144,10 @@ export default function StoryScenePage() {
         </button>
         <strong>{story.title}</strong>
       </div>
-
       <div className="story-scene-avatar">
         <div className="ai-orb">●</div>
         {step === 'scene' && <span className="story-scene-dots">•••</span>}
       </div>
-
       {step === 'scene' && currentScene && (
         <>
           <div className="story-scene-bubble">{currentScene.body}</div>
@@ -161,7 +165,6 @@ export default function StoryScenePage() {
           </div>
         </>
       )}
-
       {step === 'gate' && (
         <>
           <div className="story-scene-bubble">
@@ -178,7 +181,6 @@ export default function StoryScenePage() {
           </div>
         </>
       )}
-
       {step === 'activity' && (
         <form className="story-activity" onSubmit={submitActivity}>
           <div className="story-scene-bubble">{activityPrompt || 'Try to prompt'}</div>
@@ -195,7 +197,6 @@ export default function StoryScenePage() {
           </div>
         </form>
       )}
-
       {step === 'response' && (
         <>
           <div className="story-scene-bubble">
@@ -222,7 +223,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
           <span key={i} className="story-cleared-ray" style={{ '--ray-index': i } as React.CSSProperties} />
         ))}
       </div>
-
       {/* Glowing sun hero */}
       <div className="story-cleared-sun-wrap" aria-hidden="true">
         <div className="story-cleared-sun-glow" />
@@ -235,9 +235,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
         <span className="story-cleared-spark story-cleared-spark--3">·</span>
         <span className="story-cleared-spark story-cleared-spark--4">·</span>
       </div>
-
       <h1 className="story-cleared-title">Story Cleared!</h1>
-
       <div className="story-cleared-card">
         {isGuest ? (
           <>
@@ -251,9 +249,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 Sign Up
               </Link>
             </div>
-
             <div className="story-cleared-divider" />
-
             {/* Row 2: IBM SkillsBuild */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
@@ -271,7 +267,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 </Link>
               )}
             </div>
-
             <Link href="/" className="story-cleared-back">
               Back
             </Link>
@@ -288,9 +283,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 Sign Up
               </Link>
             </div>
-
             <div className="story-cleared-divider" />
-
             {/* Row 2: Story / IBM SkillsBuild */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
@@ -308,7 +301,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 </Link>
               )}
             </div>
-
             <Link href="/home" className="story-cleared-back">
               Back
             </Link>
