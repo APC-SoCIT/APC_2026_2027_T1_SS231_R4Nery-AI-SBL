@@ -3,12 +3,49 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Sun } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  Sun,
+  X,
+  Zap,
+  Smile,
+  Sparkles,
+  BookOpen,
+  Meh,
+  HelpCircle,
+  Frown,
+  Clock,
+  CloudDrizzle,
+  AlertTriangle,
+  TrendingDown,
+  Shuffle,
+} from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
 
-type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
+type Step = 'splash' | 'scene' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
+
+// Approximated from the reference screenshot — the mockup shows custom
+// mood-character illustrations we don't have as assets, so these are
+// generic lucide icons on colored circles standing in for them. Swap in
+// the real icon/character assets once available.
+const REACTIONS: { key: string; label: string; icon: typeof Zap; color: string }[] = [
+  { key: 'hooked', label: 'Hooked', icon: Zap, color: '#ff8fa3' },
+  { key: 'enjoying', label: 'Enjoying', icon: Smile, color: '#ff8fa3' },
+  { key: 'curious', label: 'Curious', icon: Sparkles, color: '#b088f9' },
+  { key: 'learning', label: 'Learning', icon: BookOpen, color: '#b088f9' },
+  { key: 'neutral', label: 'Neutral', icon: Meh, color: '#9aa3c4' },
+  { key: 'unsure', label: 'Unsure', icon: HelpCircle, color: '#6fb3f2' },
+  { key: 'confused', label: 'Confused', icon: Frown, color: '#5fd6a0' },
+  { key: 'slow', label: 'Slow', icon: Clock, color: '#3f8f6f' },
+  { key: 'bored', label: 'Bored', icon: CloudDrizzle, color: '#ff9d5c' },
+  { key: 'overwhelmed', label: 'Overwhelmed', icon: AlertTriangle, color: '#ff9d5c' },
+  { key: 'losing-interest', label: 'Losing Interest', icon: TrendingDown, color: '#ffcf5c' },
+  { key: 'try-another', label: 'Try Another', icon: Shuffle, color: '#ffcf5c' },
+]
 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
@@ -20,6 +57,7 @@ export default function StoryScenePage() {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  const [reaction, setReaction] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -58,11 +96,12 @@ export default function StoryScenePage() {
   }
 
   const currentScene = story.scenes[sceneIndex]
-  const gatedActivity = story.type === 'with_activity' && isGuest && story.allowFreeText !== false
-  const activityPrompt = score >= 0
-    ? story.activity?.intellectPrompt
-    : story.activity?.otherRoutePrompt
+  const activityPrompt = score >= 0 ? story.activity?.intellectPrompt : story.activity?.otherRoutePrompt
 
+  // Guests never see the free-text prompting activity, regardless of the
+  // story's type — they go straight from the last scene to the reaction
+  // screen. Only registered learners on a "with_activity" story get the
+  // activity + AI response steps.
   function choose(weight: number) {
     if (!story) return
     setScore((s) => s + weight)
@@ -73,11 +112,10 @@ export default function StoryScenePage() {
       return
     }
 
-    // Last scene answered — decide what comes next.
-    if (story.type === 'with_activity') {
-      setStep(gatedActivity ? 'gate' : 'activity')
+    if (story.type === 'with_activity' && !isGuest) {
+      setStep('activity')
     } else {
-      setStep('cleared')
+      setStep('reaction')
     }
   }
 
@@ -89,13 +127,39 @@ export default function StoryScenePage() {
   if (step === 'splash') {
     return (
       <main className="story-splash-page">
-        <img src="/ai-for-all/Story-Ai-Mascot.png" alt="" className="story-splash-mascot" />
+        <div className="story-splash-topbar">
+          <button
+            type="button"
+            className="story-splash-back"
+            onClick={() => router.push('/stories')}
+            aria-label="Back"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <button
+            type="button"
+            className="story-splash-close"
+            onClick={() => router.push('/stories')}
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <h1 className="story-splash-title">{story.title}</h1>
+
+        <div className="story-splash-mascot-area">
+          <Sparkles className="story-splash-sparkle s1" size={14} aria-hidden="true" />
+          <Sparkles className="story-splash-sparkle s2" size={10} aria-hidden="true" />
+          <Sparkles className="story-splash-sparkle s3" size={12} aria-hidden="true" />
+          <img src="/ai-for-all/Mascot-look-up.png" alt="" className="story-splash-mascot" />
+        </div>
+
         <div className="story-splash-card">
-          <h2>{story.title}</h2>
           <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
           <button
             type="button"
-            className="stories-cta"
+            className="story-splash-cta"
             onClick={() => {
               setSceneIndex(0)
               setScore(0)
@@ -103,8 +167,47 @@ export default function StoryScenePage() {
             }}
           >
             Start Story
+            <span className="launch-arrow">
+              <ArrowRight size={16} />
+            </span>
           </button>
         </div>
+      </main>
+    )
+  }
+
+  if (step === 'reaction') {
+    return (
+      <main className="story-reaction-page">
+        <div className="story-reaction-heading">
+          <p>Check-in time:</p>
+          <h2>How&apos;s the story so far?</h2>
+        </div>
+
+        <div className="reaction-grid" role="radiogroup" aria-label="How is the story so far?">
+          {REACTIONS.map(({ key, label, icon: Icon, color }) => (
+            <button
+              key={key}
+              type="button"
+              role="radio"
+              aria-checked={reaction === key}
+              className={`reaction-item${reaction === key ? ' is-selected' : ''}`}
+              onClick={() => setReaction(key)}
+            >
+              <span className="reaction-circle" style={{ background: color }}>
+                <Icon size={20} />
+              </span>
+              <small>{label}</small>
+            </button>
+          ))}
+        </div>
+
+        <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
+          Continue
+        </button>
+        <Link href="/stories" className="reaction-choose-another">
+          Choose another story
+        </Link>
       </main>
     )
   }
@@ -123,7 +226,7 @@ export default function StoryScenePage() {
       </div>
 
       <div className="story-scene-avatar">
-        <div className="ai-orb">●</div>
+        <img src="/ai-for-all/Story-Ai-Mascot.png" alt="" className="story-scene-mascot" />
         {step === 'scene' && <span className="story-scene-dots">•••</span>}
       </div>
 
@@ -141,23 +244,6 @@ export default function StoryScenePage() {
                 {i + 1}. {choice.label}
               </button>
             ))}
-          </div>
-        </>
-      )}
-
-      {step === 'gate' && (
-        <>
-          <div className="story-scene-bubble">
-            This story ends with a free-text activity for registered learners. Sign up to unlock it — or skip
-            ahead for now.
-          </div>
-          <div className="story-scene-choices">
-            <Link href="/sign-up" className="stories-cta" style={{ textAlign: 'center' }}>
-              Sign Up
-            </Link>
-            <button type="button" className="choice-button" onClick={() => setStep('cleared')}>
-              Skip for now
-            </button>
           </div>
         </>
       )}
@@ -187,7 +273,7 @@ export default function StoryScenePage() {
           <div className="story-scene-bubble">
             Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
+          <button type="button" className="stories-cta" onClick={() => setStep('reaction')}>
             Finish
           </button>
         </>

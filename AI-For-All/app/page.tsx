@@ -58,7 +58,7 @@ function Launch() {
           <strong>stories</strong>
         </h1>
         <Link href="/get-started" className="launch-button">
-          start here
+          Let&apos;s Start
           <span className="launch-arrow">
             <ArrowRight size={18} />
           </span>

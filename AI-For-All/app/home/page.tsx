@@ -112,7 +112,7 @@ export default function HomePage() {
       <img
         className="home-mascot"
         style={{ top: `calc(${currentTop}vh - 126px)` }}
-        src="/ai-for-all/Story-Ai-Mascot.png"
+        src="/ai-for-all/Home-Page-Mascot.png"
         alt=""
         aria-hidden="true"
       />
