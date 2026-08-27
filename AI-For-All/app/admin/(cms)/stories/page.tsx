@@ -1,16 +1,108 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Pencil, Archive, ArchiveRestore, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { Pencil, Archive, ArchiveRestore, Plus, Search, SlidersHorizontal, Users } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { StoryModule } from '@/lib/story-data'
 import { fetchAllStories, saveStoryToDb } from '@/lib/supabase/stories'
+import { getStoryPresenceCount, subscribeToStoryPresence } from '@/lib/supabase/presence'
 import toast from 'react-hot-toast'
 
 // Cycled swatch colors for stories that don't have a custom color set.
 const SWATCHES = ['#8dcdf4', '#c8ccff', '#ff9d76', '#c7e94e', '#ff766e', '#79a8ff']
 
 type StatusFilter = 'All' | 'Draft' | 'Published' | 'Archived'
+
+function StoryRowItem({ 
+  story, 
+  index, 
+  handleCycleStatus, 
+  handleEdit, 
+  handleToggleArchive 
+}: { 
+  story: StoryModule
+  index: number
+  handleCycleStatus: (story: StoryModule) => void
+  handleEdit: (story: StoryModule) => void
+  handleToggleArchive: (story: StoryModule) => void
+}) {
+  const [activeLearners, setActiveLearners] = useState(0)
+
+  useEffect(() => {
+    const unsubscribe = subscribeToStoryPresence(story.id, (count) => {
+      setActiveLearners(count)
+    })
+    return () => unsubscribe()
+  }, [story.id])
+
+  const hasLiveUsers = activeLearners > 0
+  const isArchived = story.status === 'Archived'
+
+  return (
+    <div className="story-row-v2" key={story.id}>
+      <span className="story-swatch" style={{ background: story.color || SWATCHES[index % SWATCHES.length] }} />
+
+      <div className="story-row-info">
+        <strong>{story.title}</strong>
+        <small>{story.category} &middot; {story.level} &middot; {story.scenes?.length || 0} scenes</small>
+      </div>
+
+      {hasLiveUsers && (
+        <div 
+          className="story-live-users" 
+          title={`${activeLearners} live learner(s)`} 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px', 
+            color: '#10b981', 
+            fontSize: '0.75rem', 
+            marginLeft: 'auto',
+            marginRight: '0.5rem',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            padding: '2px 8px',
+            borderRadius: '999px',
+            fontWeight: '600'
+          }}
+        >
+          <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} />
+          <Users size={12} />
+          <span>{activeLearners} Live User{activeLearners !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
+      <button
+        className={`story-status-pill status-${story.status.toLowerCase()}`}
+        onClick={() => handleCycleStatus(story)}
+        disabled={isArchived || hasLiveUsers}
+        title={isArchived ? 'Archived stories are read-only — restore to change status' : hasLiveUsers ? 'Cannot change status with live learners' : 'Click to toggle Draft/Published'}
+        style={{ opacity: (isArchived || hasLiveUsers) ? 0.5 : 1, cursor: (isArchived || hasLiveUsers) ? 'not-allowed' : 'pointer' }}
+      >
+        {story.status}
+      </button>
+
+      <button 
+        className="story-icon-btn" 
+        onClick={() => handleEdit(story)} 
+        title={hasLiveUsers ? 'Cannot edit with live learners' : 'Edit story'}
+        disabled={hasLiveUsers}
+        style={{ opacity: hasLiveUsers ? 0.5 : 1, cursor: hasLiveUsers ? 'not-allowed' : 'pointer' }}
+      >
+        <Pencil size={16} />
+      </button>
+
+      <button
+        className="story-icon-btn"
+        onClick={() => handleToggleArchive(story)}
+        title={hasLiveUsers ? `Cannot ${isArchived ? 'restore' : 'archive'} with live learners` : (isArchived ? 'Restore story' : 'Archive story')}
+        disabled={hasLiveUsers}
+        style={{ opacity: hasLiveUsers ? 0.5 : 1, cursor: hasLiveUsers ? 'not-allowed' : 'pointer' }}
+      >
+        {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+      </button>
+    </div>
+  )
+}
 
 export default function AdminStoriesPage() {
   const router = useRouter()
@@ -47,7 +139,19 @@ export default function AdminStoriesPage() {
   }, [stories, statusFilter, query])
 
   const handleToggleArchive = async (story: StoryModule) => {
-    const newStatus = story.status === 'Archived' ? 'Published' : 'Archived'
+    const isArchiving = story.status !== 'Archived'
+
+    const activeLearners = await getStoryPresenceCount(story.id)
+    if (activeLearners > 0) {
+      toast.error(`Cannot ${isArchiving ? 'archive' : 'restore'}: there are ${activeLearners} active learner(s) currently in this story.`)
+      return
+    }
+
+    if (!window.confirm(`Are you sure you want to ${isArchiving ? 'archive' : 'restore'} "${story.title}"?`)) {
+      return
+    }
+
+    const newStatus = isArchiving ? 'Archived' : 'Published'
     try {
       const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
       await saveStoryToDb(updated)
@@ -60,7 +164,19 @@ export default function AdminStoriesPage() {
 
   const handleCycleStatus = async (story: StoryModule) => {
     if (story.status === 'Archived') return // use the archive button to restore
+    
+    const activeLearners = await getStoryPresenceCount(story.id)
+    if (activeLearners > 0) {
+      toast.error(`Cannot change status: there are ${activeLearners} active learner(s) currently in this story.`)
+      return
+    }
+
     const newStatus = story.status === 'Published' ? 'Draft' : 'Published'
+
+    if (!window.confirm(`Are you sure you want to change the status of "${story.title}" to ${newStatus}?`)) {
+      return
+    }
+
     try {
       const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
       await saveStoryToDb(updated)
@@ -71,7 +187,17 @@ export default function AdminStoriesPage() {
     }
   }
 
-  const handleEdit = (story: StoryModule) => {
+  const handleEdit = async (story: StoryModule) => {
+    const activeLearners = await getStoryPresenceCount(story.id)
+    if (activeLearners > 0) {
+      toast.error(`Cannot edit: there are ${activeLearners} active learner(s) currently in this story.`)
+      return
+    }
+
+    if (!window.confirm(`Are you sure you want to edit "${story.title}"?`)) {
+      return
+    }
+
     router.push(`/admin/stories/${story.id}/edit`)
   }
 
@@ -148,35 +274,14 @@ export default function AdminStoriesPage() {
           </div>
         ) : (
           visibleStories.map((story, i) => (
-            <div className="story-row-v2" key={story.id}>
-              <span className="story-swatch" style={{ background: story.color || SWATCHES[i % SWATCHES.length] }} />
-
-              <div className="story-row-info">
-                <strong>{story.title}</strong>
-                <small>{story.category} · {story.level} · {story.scenes?.length || 0} scenes</small>
-              </div>
-
-              <button
-                className={`story-status-pill status-${story.status.toLowerCase()}`}
-                onClick={() => handleCycleStatus(story)}
-                disabled={story.status === 'Archived'}
-                title={story.status === 'Archived' ? 'Archived stories are read-only — restore to change status' : 'Click to toggle Draft/Published'}
-              >
-                {story.status}
-              </button>
-
-              <button className="story-icon-btn" onClick={() => handleEdit(story)} title="Edit story">
-                <Pencil size={16} />
-              </button>
-
-              <button
-                className="story-icon-btn"
-                onClick={() => handleToggleArchive(story)}
-                title={story.status === 'Archived' ? 'Restore story' : 'Archive story'}
-              >
-                {story.status === 'Archived' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-              </button>
-            </div>
+            <StoryRowItem
+              key={story.id}
+              story={story}
+              index={i}
+              handleCycleStatus={handleCycleStatus}
+              handleEdit={handleEdit}
+              handleToggleArchive={handleToggleArchive}
+            />
           ))
         )}
       </div>
