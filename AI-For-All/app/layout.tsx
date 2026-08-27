@@ -1,5 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { SessionProvider } from '@/lib/sessionContext'
+import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -39,9 +41,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-[#e8eaff]">
+    // Removed the hardcoded bg-[#e8eaff] class here — it was painting a lavender
+    // background on <html> that peeked through as a white/light border around
+    // full-bleed pages. Each page (Landing, Get Started, auth, Home) already
+    // covers 100dvh with its own background, so <html> doesn't need one.
+    <html lang="en">
       <body>
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+        <Toaster position="bottom-right" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

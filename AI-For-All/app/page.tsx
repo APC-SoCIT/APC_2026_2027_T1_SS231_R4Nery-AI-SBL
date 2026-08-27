@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, CircleHelp, Gift, Home, LockKeyhole, Menu, QrCode, Sparkles, Trophy, UserRound, X } from 'lucide-react'
 
 const mascot = 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/u%201-iNRGaghtYtdeXSHFa2XQPl2ryeu5Fm.png'
@@ -30,7 +31,7 @@ export default function Page() {
     {screen !== 'launch' && <header className="topbar"><button className="brand" onClick={() => go('launch')}><span className="brand-mark">AI</span><span>for <b>ALL</b></span></button><div className="header-actions"><button className="icon-button" aria-label="Help"><CircleHelp size={20}/></button><button className="icon-button" aria-label="Open menu" onClick={() => setMenu(!menu)}>{menu ? <X size={20}/> : <Menu size={20}/>}</button></div></header>}
     {menu && <div className="menu-popover"><button onClick={() => go('dashboard')}>My profile</button><button onClick={() => go('archive')}>My archive</button><button onClick={() => go('rewards')}>Rewards</button><a href="/admin">Admin portal</a></div>}
     <main className={screen === 'launch' ? 'main-content launch-wrap' : 'main-content'}>
-      {screen === 'launch' && <Launch onStart={() => go('start')} />}
+      {screen === 'launch' && <Launch />}
       {screen === 'start' && <Start onAuth={(mode) => { setAuthMode(mode); go('auth') }} onGuest={() => go('stories')} />}
       {screen === 'auth' && <Auth mode={authMode} onMode={setAuthMode} onDone={() => { setProfileCreated(true); go('profile') }} />}
       {screen === 'profile' && <ProfileSetup onDone={() => { setProfileCreated(true); go('dashboard') }} />}
@@ -44,7 +45,28 @@ export default function Page() {
   </div>
 }
 
-function Launch({ onStart }: { onStart: () => void }) { return <section className="launch-page"><div className="launch-copy"><div className="brand launch-brand"><span className="brand-mark">AI</span><span>for <b>ALL</b></span></div><h1>Learn AI<br/><em>through</em><br/>stories</h1><button className="launch-button" onClick={onStart}>start here <ArrowRight size={16}/></button></div><img className="launch-mascot" src={mascot} alt="AI for ALL mascot"/></section> }
+function Launch() {
+  return (
+    <section className="launch-page">
+      <img className="launch-swirl" src="/ai-for-all/swirly-for-landing-page.png" alt="" aria-hidden="true" />
+      <div className="launch-copy">
+        <h1>
+          Learn AI
+          <br />
+          through
+          <br />
+          <strong>stories</strong>
+        </h1>
+        <Link href="/get-started" className="launch-button">
+          start here
+          <span className="launch-arrow">
+            <ArrowRight size={18} />
+          </span>
+        </Link>
+      </div>
+    </section>
+  )
+}
 function Start({ onAuth, onGuest }: { onAuth: (mode: 'signup'|'signin') => void; onGuest: () => void }) { return <section className="onboarding-page"><p className="kicker">AI FOR ALL</p><h2>Let&apos;s get<br/><span>you started</span></h2><p>Learn how AI works through quick, interactive stories. No experience needed.</p><button className="primary-button" onClick={() => onAuth('signup')}>Sign up</button><button className="secondary-button" onClick={() => onAuth('signin')}>Log in</button><button className="text-button" onClick={onGuest}>Continue as guest</button><small>Accessibility and assistance</small><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design%20%2883%29%201-GfWInwvd4aNMb16ANSTiCafiREv6io.png" alt="Friendly mascot"/></section> }
 function Auth({ mode, onMode, onDone }: { mode: 'signup'|'signin'; onMode: (mode: 'signup'|'signin') => void; onDone: () => void }) { return <section className="auth-page"><div className="auth-art"><img src={mascot} alt="AI for ALL mascot"/><h2>{mode === 'signup' ? 'Ready to Learn AI?' : 'Hey There, You’re Back!'}</h2></div><div className="auth-form"><p className="kicker">{mode === 'signup' ? 'CREATE YOUR ACCOUNT' : 'WELCOME BACK'}</p><label>Your Name<input placeholder="Enter your name"/></label><label>Email<input type="email" placeholder="you@example.com"/></label><label>Password<input type="password" placeholder="••••••••"/></label><button className="primary-button" onClick={onDone}>{mode === 'signup' ? 'I’m Ready' : 'Login'} <ChevronRight size={17}/></button><button className="text-button" onClick={() => onMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}</button></div></section> }
 function ProfileSetup({ onDone }: { onDone: () => void }) { return <section className="profile-setup"><p className="kicker">PROFILE CREATED</p><h2>You&apos;re all set, <span>Daniel!</span></h2><p>Your profile is ready. Your stories, and progress can now be saved.</p><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design%20%2892%29%201-aiKRFyLKe0eeImvRr0FlBHR6wrS7WD.png" alt="Mascot celebrating"/><button className="primary-button" onClick={onDone}>Continue</button></section> }
