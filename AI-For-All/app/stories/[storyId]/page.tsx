@@ -49,8 +49,6 @@ export default function StoryScenePage() {
     }
   }, [story, params.storyId])
 
-  const session = getMockSession()
-  const isGuest = !session
   const { session } = useSession()
   const isGuest = !session || session.role === 'guest'
   const [showSignupPrompt, setShowSignupPrompt] = useState(false)
