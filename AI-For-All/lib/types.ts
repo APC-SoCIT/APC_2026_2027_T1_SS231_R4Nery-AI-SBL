@@ -33,8 +33,9 @@ export interface UserSession {
   sessionId: string
   userId: string
   isGuest: boolean
-  authMethod: 'phone' | 'google' | null
-  phoneVerified: boolean
+  role: 'guest' | 'user' | 'facilitator' | 'admin'
+  authMethod: 'email' | 'google' | null
+  emailVerified: boolean
   selectedPath?: AIPath
   selectedPersona?: Persona
   completedModules: string[]
