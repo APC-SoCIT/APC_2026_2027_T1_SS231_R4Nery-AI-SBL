@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Pencil, Archive, ArchiveRestore, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Pencil, Archive, ArchiveRestore, Plus, Search, SlidersHorizontal, Users } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { StoryModule } from '@/lib/story-data'
 import { fetchAllStories, saveStoryToDb } from '@/lib/supabase/stories'
+import { subscribeToStoryPresence } from '@/lib/supabase/presence'
+import ConfirmModal from '@/components/ui/confirm-modal'
 import toast from 'react-hot-toast'
 
 // Cycled swatch colors for stories that don't have a custom color set.
@@ -20,6 +22,17 @@ export default function AdminStoriesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
   const [filterOpen, setFilterOpen] = useState(false)
 
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [confirmVariant, setConfirmVariant] = useState<'danger' | 'default'>('default')
+  const [confirmLabel, setConfirmLabel] = useState('Confirm')
+
+  // Live-user presence counts per story ID
+  const [liveUsers, setLiveUsers] = useState<Record<string, number>>({})
+
   const loadStories = async () => {
     setLoading(true)
     const list = await fetchAllStories()
@@ -30,6 +43,27 @@ export default function AdminStoriesPage() {
   useEffect(() => {
     loadStories()
   }, [])
+
+  // Subscribe to presence for each story
+  useEffect(() => {
+    if (stories.length === 0) return
+
+    const unsubscribers: (() => void)[] = []
+
+    stories.forEach((story) => {
+      const unsub = subscribeToStoryPresence(story.id, (count) => {
+        setLiveUsers((prev) => {
+          if (prev[story.id] === count) return prev
+          return { ...prev, [story.id]: count }
+        })
+      })
+      unsubscribers.push(unsub)
+    })
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub())
+    }
+  }, [stories])
 
   const stats = useMemo(() => ({
     total: stories.length,
@@ -46,15 +80,47 @@ export default function AdminStoriesPage() {
     })
   }, [stories, statusFilter, query])
 
+  const showConfirm = useCallback((opts: {
+    title: string
+    message: string
+    variant?: 'danger' | 'default'
+    label?: string
+    action: () => void
+  }) => {
+    setConfirmTitle(opts.title)
+    setConfirmMessage(opts.message)
+    setConfirmVariant(opts.variant || 'default')
+    setConfirmLabel(opts.label || 'Confirm')
+    setConfirmAction(() => opts.action)
+    setConfirmOpen(true)
+  }, [])
+
   const handleToggleArchive = async (story: StoryModule) => {
-    const newStatus = story.status === 'Archived' ? 'Published' : 'Archived'
-    try {
-      const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
-      await saveStoryToDb(updated)
-      setStories(stories.map(s => s.id === story.id ? updated : s))
-      toast.success(newStatus === 'Archived' ? `"${story.title}" archived` : `"${story.title}" restored`)
-    } catch {
-      toast.error('Failed to update story')
+    const isArchiving = story.status !== 'Archived'
+    const newStatus = isArchiving ? 'Archived' : 'Published'
+
+    const doArchive = async () => {
+      try {
+        const updated = { ...story, status: newStatus as StoryModule['status'], updatedAt: 'Just now' }
+        await saveStoryToDb(updated)
+        setStories(stories.map(s => s.id === story.id ? updated : s))
+        toast.success(newStatus === 'Archived' ? `"${story.title}" archived` : `"${story.title}" restored`)
+      } catch {
+        toast.error('Failed to update story')
+      }
+    }
+
+    if (isArchiving) {
+      showConfirm({
+        title: 'Archive this story?',
+        message: `"${story.title}" will be archived and hidden from learners. You can restore it later.`,
+        variant: 'danger',
+        label: 'Archive',
+        action: doArchive,
+      })
+    } else {
+      // Restoring doesn't need confirmation
+      doArchive()
     }
   }
 
@@ -75,8 +141,24 @@ export default function AdminStoriesPage() {
     router.push(`/admin/stories/${story.id}/edit`)
   }
 
+  const getStoryLiveCount = (storyId: string) => liveUsers[storyId] || 0
+
   return (
     <section className="story-manager-v2">
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        variant={confirmVariant}
+        confirmLabel={confirmLabel}
+        onConfirm={() => {
+          setConfirmOpen(false)
+          confirmAction?.()
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
       {/* Stat cards */}
       <div className="story-stat-row">
         <div className="story-stat-card stat-total">
@@ -147,37 +229,62 @@ export default function AdminStoriesPage() {
               : 'No stories match your search or filter.'}
           </div>
         ) : (
-          visibleStories.map((story, i) => (
-            <div className="story-row-v2" key={story.id}>
-              <span className="story-swatch" style={{ background: story.color || SWATCHES[i % SWATCHES.length] }} />
+          visibleStories.map((story, i) => {
+            const liveCount = getStoryLiveCount(story.id)
+            const hasLiveUsers = liveCount > 0
 
-              <div className="story-row-info">
-                <strong>{story.title}</strong>
-                <small>{story.category} · {story.level} · {story.scenes?.length || 0} scenes</small>
+            return (
+              <div className="story-row-v2" key={story.id}>
+                <span className="story-swatch" style={{ background: story.color || SWATCHES[i % SWATCHES.length] }} />
+
+                <div className="story-row-info">
+                  <strong>{story.title}</strong>
+                  <small>{story.category} · {story.level} · {story.scenes?.length || 0} scenes</small>
+                </div>
+
+                {/* Live user badge */}
+                {hasLiveUsers && (
+                  <span className="story-live-badge" title={`${liveCount} user(s) currently playing`}>
+                    <span className="story-live-dot" />
+                    <Users size={12} /> {liveCount} live
+                  </span>
+                )}
+
+                <button
+                  className={`story-status-pill status-${story.status.toLowerCase()}`}
+                  onClick={() => handleCycleStatus(story)}
+                  disabled={story.status === 'Archived'}
+                  title={story.status === 'Archived' ? 'Archived stories are read-only — restore to change status' : 'Click to toggle Draft/Published'}
+                >
+                  {story.status}
+                </button>
+
+                <button
+                  className="story-icon-btn"
+                  onClick={() => handleEdit(story)}
+                  title={hasLiveUsers ? `Cannot edit — ${liveCount} user(s) currently playing` : 'Edit story'}
+                  disabled={hasLiveUsers}
+                >
+                  <Pencil size={16} />
+                </button>
+
+                <button
+                  className="story-icon-btn"
+                  onClick={() => handleToggleArchive(story)}
+                  title={
+                    hasLiveUsers
+                      ? `Cannot archive — ${liveCount} user(s) currently playing`
+                      : story.status === 'Archived'
+                        ? 'Restore story'
+                        : 'Archive story'
+                  }
+                  disabled={hasLiveUsers && story.status !== 'Archived'}
+                >
+                  {story.status === 'Archived' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                </button>
               </div>
-
-              <button
-                className={`story-status-pill status-${story.status.toLowerCase()}`}
-                onClick={() => handleCycleStatus(story)}
-                disabled={story.status === 'Archived'}
-                title={story.status === 'Archived' ? 'Archived stories are read-only — restore to change status' : 'Click to toggle Draft/Published'}
-              >
-                {story.status}
-              </button>
-
-              <button className="story-icon-btn" onClick={() => handleEdit(story)} title="Edit story">
-                <Pencil size={16} />
-              </button>
-
-              <button
-                className="story-icon-btn"
-                onClick={() => handleToggleArchive(story)}
-                title={story.status === 'Archived' ? 'Restore story' : 'Archive story'}
-              >
-                {story.status === 'Archived' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-              </button>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </section>
