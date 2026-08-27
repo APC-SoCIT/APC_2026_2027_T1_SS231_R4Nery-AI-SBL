@@ -2,8 +2,11 @@
 
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertTriangle } from 'lucide-react'
 import { StoryModule, StoryScene } from '@/lib/story-data'
 import { fetchStoryById, saveStoryToDb } from '@/lib/supabase/stories'
+import { subscribeToStoryPresence } from '@/lib/supabase/presence'
+import ConfirmModal from '@/components/ui/confirm-modal'
 import styles from '../../create/create.module.css'
 
 export default function EditStoryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,6 +19,12 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
   // Editor State
   const [activeSceneIndex, setActiveSceneIndex] = useState(0)
 
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // Live-user presence
+  const [liveCount, setLiveCount] = useState(0)
+
   useEffect(() => {
     const loadStory = async () => {
       const data = await fetchStoryById(id)
@@ -23,6 +32,15 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
       setLoading(false)
     }
     loadStory()
+  }, [id])
+
+  // Subscribe to presence for this story
+  useEffect(() => {
+    if (!id) return
+    const unsub = subscribeToStoryPresence(id, (count) => {
+      setLiveCount(count)
+    })
+    return () => unsub()
   }, [id])
 
   if (loading) {
@@ -42,6 +60,8 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
       </section>
     )
   }
+
+  const hasLiveUsers = liveCount > 0
 
   // Update scene in active state
   const updateActiveScene = (field: string, value: any) => {
@@ -92,10 +112,28 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
     router.push('/admin/stories')
   }
 
+  const handleSaveClick = () => {
+    if (hasLiveUsers) return // safety guard
+    setConfirmOpen(true)
+  }
+
   const currentScene = story.scenes[activeSceneIndex]
 
   return (
     <section className={styles.wizardContainer}>
+      {/* Save Confirmation Modal */}
+      <ConfirmModal
+        open={confirmOpen}
+        title="Apply changes?"
+        message={`Save your edits to "${story.title}"? This will update the story for all learners.`}
+        confirmLabel="Save Changes"
+        onConfirm={() => {
+          setConfirmOpen(false)
+          handleSave()
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
       <div className={styles.wizardHeader}>
         <div>
           <h2>Edit Story: {story.title}</h2>
@@ -106,7 +144,17 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
         </div>
       </div>
 
-      <div style={{ minHeight: '380px' }}>
+      {/* Live-user warning banner */}
+      {hasLiveUsers && (
+        <div className="story-live-banner">
+          <AlertTriangle size={18} />
+          <span>
+            {liveCount} user{liveCount > 1 ? 's' : ''} currently playing this story. Editing is disabled while users are active.
+          </span>
+        </div>
+      )}
+
+      <div style={{ minHeight: '380px', opacity: hasLiveUsers ? 0.5 : 1, pointerEvents: hasLiveUsers ? 'none' : 'auto' }}>
          {/* Basic Settings */}
          <div className={styles.row} style={{ marginBottom: '30px' }}>
            <div className={styles.col}>
@@ -254,8 +302,13 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
         <button className={styles.btnSecondary} onClick={() => router.push('/admin/stories')} disabled={saving}>
           Cancel
         </button>
-        <button className={styles.btnPrimary} onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
+        <button
+          className={styles.btnPrimary}
+          onClick={handleSaveClick}
+          disabled={saving || hasLiveUsers}
+          title={hasLiveUsers ? `Cannot save — ${liveCount} user(s) currently playing` : ''}
+        >
+          {saving ? 'Saving...' : hasLiveUsers ? `Live Users (${liveCount}) — Save Disabled` : 'Save Changes'}
         </button>
       </div>
     </section>

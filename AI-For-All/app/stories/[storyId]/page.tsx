@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send, Sun } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
+import { trackStoryPresence } from '@/lib/supabase/presence'
 
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
 
@@ -20,6 +21,7 @@ export default function StoryScenePage() {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  const presenceCleanup = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -34,6 +36,16 @@ export default function StoryScenePage() {
       cancelled = true
     }
   }, [params.storyId])
+
+  // Track presence while the learner is on this story page
+  useEffect(() => {
+    if (!story || !params.storyId) return
+    presenceCleanup.current = trackStoryPresence(params.storyId)
+    return () => {
+      presenceCleanup.current?.()
+      presenceCleanup.current = null
+    }
+  }, [story, params.storyId])
 
   const session = getMockSession()
   const isGuest = !session
