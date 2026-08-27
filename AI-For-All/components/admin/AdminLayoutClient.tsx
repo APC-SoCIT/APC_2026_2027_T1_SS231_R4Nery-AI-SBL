@@ -17,7 +17,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/admin/login')
+    router.push('/sign-in')
   }
 
   const navItems = [
