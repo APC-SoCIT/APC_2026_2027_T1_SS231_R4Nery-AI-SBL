@@ -1,63 +1,26 @@
 'use client'
-
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
-  ArrowLeft,
-  ArrowRight,
-  Send,
-  Sun,
-  X,
-  Zap,
-  Smile,
-  Sparkles,
-  BookOpen,
-  Meh,
-  HelpCircle,
-  Frown,
-  Clock,
-  CloudDrizzle,
-  AlertTriangle,
-  TrendingDown,
-  Shuffle,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Send, Sun, Lock, BookOpen, Star, X, Sparkles } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
+import { trackStoryPresence } from '@/lib/supabase/presence'
 import { StoryModule } from '@/lib/story-data'
-import { getMockSession } from '@/lib/mock-auth'
+import { useSession } from '@/lib/sessionContext'
+import { SignupPrompt } from '@/components/auth/signup-prompt'
 
-type Step = 'splash' | 'scene' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
-
-// Approximated from the reference screenshot — the mockup shows custom
-// mood-character illustrations we don't have as assets, so these are
-// generic lucide icons on colored circles standing in for them. Swap in
-// the real icon/character assets once available.
-const REACTIONS: { key: string; label: string; icon: typeof Zap; color: string }[] = [
-  { key: 'hooked', label: 'Hooked', icon: Zap, color: '#ff8fa3' },
-  { key: 'enjoying', label: 'Enjoying', icon: Smile, color: '#ff8fa3' },
-  { key: 'curious', label: 'Curious', icon: Sparkles, color: '#b088f9' },
-  { key: 'learning', label: 'Learning', icon: BookOpen, color: '#b088f9' },
-  { key: 'neutral', label: 'Neutral', icon: Meh, color: '#9aa3c4' },
-  { key: 'unsure', label: 'Unsure', icon: HelpCircle, color: '#6fb3f2' },
-  { key: 'confused', label: 'Confused', icon: Frown, color: '#5fd6a0' },
-  { key: 'slow', label: 'Slow', icon: Clock, color: '#3f8f6f' },
-  { key: 'bored', label: 'Bored', icon: CloudDrizzle, color: '#ff9d5c' },
-  { key: 'overwhelmed', label: 'Overwhelmed', icon: AlertTriangle, color: '#ff9d5c' },
-  { key: 'losing-interest', label: 'Losing Interest', icon: TrendingDown, color: '#ffcf5c' },
-  { key: 'try-another', label: 'Try Another', icon: Shuffle, color: '#ffcf5c' },
-]
+type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
   const router = useRouter()
-
   const [story, setStory] = useState<StoryModule | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('splash')
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
-  const [reaction, setReaction] = useState<string | null>(null)
+  const presenceCleanup = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -73,14 +36,42 @@ export default function StoryScenePage() {
     }
   }, [params.storyId])
 
-  const session = getMockSession()
-  const isGuest = !session
+  // Track presence while the learner is on this story page
+  useEffect(() => {
+    if (!story || !params.storyId) return
+    presenceCleanup.current = trackStoryPresence(params.storyId)
+    return () => {
+      presenceCleanup.current?.()
+      presenceCleanup.current = null
+    }
+  }, [story, params.storyId])
+
+  const { session } = useSession()
+  const isGuest = !session || session.role === 'guest'
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false)
+
+  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
+  useEffect(() => {
+    if (step === 'cleared' && isGuest) {
+      setShowSignupPrompt(true)
+    }
+  }, [step, isGuest])
 
   if (loading) {
     return (
       <main className="story-scene-page">
         <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
       </main>
+    )
+  }
+
+  // Render the cleared screen (outside the scene layout)
+  if (step === 'cleared' && story) {
+    return (
+      <>
+        <StoryCleared story={story} isGuest={isGuest} />
+        <SignupPrompt open={showSignupPrompt} onDismiss={() => setShowSignupPrompt(false)} />
+      </>
     )
   }
 
@@ -96,26 +87,24 @@ export default function StoryScenePage() {
   }
 
   const currentScene = story.scenes[sceneIndex]
-  const activityPrompt = score >= 0 ? story.activity?.intellectPrompt : story.activity?.otherRoutePrompt
+  const gatedActivity = story.type === 'with_activity' && isGuest && story.allowFreeText !== false
+  const activityPrompt = score >= 0
+    ? story.activity?.intellectPrompt
+    : story.activity?.otherRoutePrompt
 
-  // Guests never see the free-text prompting activity, regardless of the
-  // story's type — they go straight from the last scene to the reaction
-  // screen. Only registered learners on a "with_activity" story get the
-  // activity + AI response steps.
   function choose(weight: number) {
     if (!story) return
     setScore((s) => s + weight)
-
     const isLastScene = sceneIndex >= story.scenes.length - 1
     if (!isLastScene) {
       setSceneIndex((i) => i + 1)
       return
     }
-
-    if (story.type === 'with_activity' && !isGuest) {
-      setStep('activity')
+    // Last scene answered — decide what comes next.
+    if (story.type === 'with_activity') {
+      setStep(gatedActivity ? 'gate' : 'activity')
     } else {
-      setStep('reaction')
+      setStep('cleared')
     }
   }
 
@@ -176,46 +165,6 @@ export default function StoryScenePage() {
     )
   }
 
-  if (step === 'reaction') {
-    return (
-      <main className="story-reaction-page">
-        <div className="story-reaction-heading">
-          <p>Check-in time:</p>
-          <h2>How&apos;s the story so far?</h2>
-        </div>
-
-        <div className="reaction-grid" role="radiogroup" aria-label="How is the story so far?">
-          {REACTIONS.map(({ key, label, icon: Icon, color }) => (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={reaction === key}
-              className={`reaction-item${reaction === key ? ' is-selected' : ''}`}
-              onClick={() => setReaction(key)}
-            >
-              <span className="reaction-circle" style={{ background: color }}>
-                <Icon size={20} />
-              </span>
-              <small>{label}</small>
-            </button>
-          ))}
-        </div>
-
-        <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
-          Continue
-        </button>
-        <Link href="/stories" className="reaction-choose-another">
-          Choose another story
-        </Link>
-      </main>
-    )
-  }
-
-  if (step === 'cleared') {
-    return <StoryCleared story={story} isGuest={isGuest} />
-  }
-
   return (
     <main className="story-scene-page">
       <div className="story-scene-header">
@@ -224,12 +173,10 @@ export default function StoryScenePage() {
         </button>
         <strong>{story.title}</strong>
       </div>
-
       <div className="story-scene-avatar">
         <img src="/ai-for-all/Story-Ai-Mascot.png" alt="" className="story-scene-mascot" />
         {step === 'scene' && <span className="story-scene-dots">•••</span>}
       </div>
-
       {step === 'scene' && currentScene && (
         <>
           <div className="story-scene-bubble">{currentScene.body}</div>
@@ -247,7 +194,22 @@ export default function StoryScenePage() {
           </div>
         </>
       )}
-
+      {step === 'gate' && (
+        <>
+          <div className="story-scene-bubble">
+            This story ends with a free-text activity for registered learners. Sign up to unlock it — or skip
+            ahead for now.
+          </div>
+          <div className="story-scene-choices">
+            <Link href="/sign-up" className="stories-cta" style={{ textAlign: 'center' }}>
+              Sign Up
+            </Link>
+            <button type="button" className="choice-button" onClick={() => setStep('cleared')}>
+              Skip for now
+            </button>
+          </div>
+        </>
+      )}
       {step === 'activity' && (
         <form className="story-activity" onSubmit={submitActivity}>
           <div className="story-scene-bubble">{activityPrompt || 'Try to prompt'}</div>
@@ -264,7 +226,6 @@ export default function StoryScenePage() {
           </div>
         </form>
       )}
-
       {step === 'response' && (
         <>
           <div className="story-scene-bubble">
@@ -273,7 +234,7 @@ export default function StoryScenePage() {
           <div className="story-scene-bubble">
             Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('reaction')}>
+          <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
             Finish
           </button>
         </>
@@ -285,53 +246,96 @@ export default function StoryScenePage() {
 function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean }) {
   return (
     <main className="story-cleared-page">
-      <Sun size={64} className="story-cleared-icon" />
-      <h1>STORY CLEARED</h1>
-
-      {isGuest ? (
-        <div className="story-cleared-card">
-          <div className="story-cleared-row">
-            <strong>Unlock more stories!</strong>
-            <Link href="/sign-up" className="stories-cta">
-              Sign Up
-            </Link>
-          </div>
-          {story.skillsBuildUrl && (
-            <div className="story-cleared-row">
-              <strong>Want to learn more about AI?</strong>
-              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
-                {story.skillsBuildButtonText || 'IBM SkillsBuild'}
-              </a>
-            </div>
-          )}
-          <Link href="/" className="text-button story-cleared-backhome">
-            Back Home
-          </Link>
+      {/* Sunburst rays */}
+      <div className="story-cleared-sunburst" aria-hidden="true">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <span key={i} className="story-cleared-ray" style={{ '--ray-index': i } as React.CSSProperties} />
+        ))}
+      </div>
+      {/* Glowing sun hero */}
+      <div className="story-cleared-sun-wrap" aria-hidden="true">
+        <div className="story-cleared-sun-glow" />
+        <div className="story-cleared-sun-core">
+          <Sun size={56} strokeWidth={1.5} />
         </div>
-      ) : (
-        <div className="story-cleared-card">
-          {story.skillsBuildUrl && (
-            <div className="story-cleared-row">
-              <strong>Want to learn more about AI?</strong>
-              <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="secondary-button">
-                {story.skillsBuildButtonText || 'IBM SkillsBuild Link'}
-              </a>
+        {/* Sparkles */}
+        <span className="story-cleared-spark story-cleared-spark--1">✦</span>
+        <span className="story-cleared-spark story-cleared-spark--2">✦</span>
+        <span className="story-cleared-spark story-cleared-spark--3">·</span>
+        <span className="story-cleared-spark story-cleared-spark--4">·</span>
+      </div>
+      <h1 className="story-cleared-title">Story Cleared!</h1>
+      <div className="story-cleared-card">
+        {isGuest ? (
+          <>
+            {/* Row 1: Unlock */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
+                <Lock size={20} />
+              </div>
+              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
+              <Link href="/sign-up" className="story-cleared-btn">
+                Sign Up
+              </Link>
             </div>
-          )}
-          <div className="story-cleared-row">
-            <strong>Explore More Stories</strong>
-            <Link href="/stories" className="stories-cta">
-              Explore Stories
+            <div className="story-cleared-divider" />
+            {/* Row 2: IBM SkillsBuild */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                <BookOpen size={20} />
+                <Star size={10} className="story-cleared-book-star" />
+              </div>
+              <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+              {story.skillsBuildUrl ? (
+                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                </a>
+              ) : (
+                <Link href="/stories" className="story-cleared-btn">
+                  Explore Stories
+                </Link>
+              )}
+            </div>
+            <Link href="/" className="story-cleared-back">
+              Back
             </Link>
-          </div>
-          <Link href={`/stories/${story.id}`} className="text-button">
-            Replay this story
-          </Link>
-          <Link href="/home" className="text-button story-cleared-backhome">
-            Back Home
-          </Link>
-        </div>
-      )}
+          </>
+        ) : (
+          <>
+            {/* Row 1: Sign Up */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
+                <Lock size={20} />
+              </div>
+              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
+              <Link href="/sign-up" className="story-cleared-btn">
+                Sign Up
+              </Link>
+            </div>
+            <div className="story-cleared-divider" />
+            {/* Row 2: Story / IBM SkillsBuild */}
+            <div className="story-cleared-cta-row">
+              <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                <BookOpen size={20} />
+                <Star size={10} className="story-cleared-book-star" />
+              </div>
+              <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+              {story.skillsBuildUrl ? (
+                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  Story
+                </a>
+              ) : (
+                <Link href={`/stories/${story.id}`} className="story-cleared-btn">
+                  Story
+                </Link>
+              )}
+            </div>
+            <Link href="/home" className="story-cleared-back">
+              Back
+            </Link>
+          </>
+        )}
+      </div>
     </main>
   )
 }
