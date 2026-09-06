@@ -232,7 +232,7 @@ export default function CreateStoryWizard() {
                     className={styles.textInput}
                     value={concept} 
                     onChange={e => setConcept(e.target.value)} 
-                    placeholder="e.g. Machine Learning, AI Ethics"
+                    placeholder="e.g. Smart Helpers, Fairness in Technology"
                   />
                 </div>
               </div>
