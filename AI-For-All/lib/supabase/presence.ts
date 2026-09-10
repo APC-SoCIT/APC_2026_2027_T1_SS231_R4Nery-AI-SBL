@@ -116,33 +116,69 @@ export function subscribeToStoryPresence(
  * One-shot: get the current number of learner users on a story.
  * Joins the SAME channel, waits for presence sync, counts, then leaves.
  */
+function countLearnersInState(state: ReturnType<RealtimeChannel['presenceState']>): number {
+  let count = 0
+  for (const key of Object.keys(state)) {
+    const presences = state[key] as any[]
+    if (presences && presences.some((p: any) => p.role === 'learner')) {
+      count++
+    }
+  }
+  return count
+}
+
+/**
+ * One-shot: get the current number of learner users on a story.
+ *
+ * Strategy:
+ *  1. If the Supabase client already has a subscribed channel for this story
+ *     (e.g. from `subscribeToStoryPresence` running on the admin page), read
+ *     its presenceState() directly — no new subscription needed and no risk of
+ *     "cannot add callbacks after subscribe()" errors.
+ *  2. Otherwise, open a brand-new uniquely-named probe channel, wait for the
+ *     first sync event, then clean it up.
+ */
 export function getStoryPresenceCount(storyId: string): Promise<number> {
   return new Promise((resolve) => {
     const supabase = createClient()
-    const channelName = storyChannelName(storyId) // ← SAME channel name
+    const channelName = storyChannelName(storyId)
+    const internalTopic = `realtime:${channelName}`
 
-    const probeKey = `probe-${Date.now()}`
+    // ── Strategy 1: reuse an already-subscribed channel ──────────────────────
+    // supabase.channel() is a singleton registry keyed on channel name.
+    // If the admin page already called subscribeToStoryPresence(), that channel
+    // is already subscribed; calling .on() on it again throws the error above.
+    // Instead, find it via getChannels() and read its state directly.
+    const existing = supabase.getChannels().find(
+      (ch) => ch.topic === internalTopic
+    )
+    if (existing) {
+      resolve(countLearnersInState(existing.presenceState()))
+      return
+    }
 
-    const channel: RealtimeChannel = supabase.channel(channelName, {
+    // ── Strategy 2: open a fresh probe channel ────────────────────────────────
+    // Use a unique channel name (including a timestamp) so it never collides
+    // with any existing channel in the client's registry.
+    const probeKey = `probe-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const probeChannelName = `${channelName}:${probeKey}`
+
+    const channel: RealtimeChannel = supabase.channel(probeChannelName, {
       config: { presence: { key: probeKey } },
     })
 
     let resolved = false
 
+    const finish = (count: number) => {
+      if (resolved) return
+      resolved = true
+      supabase.removeChannel(channel)
+      resolve(count)
+    }
+
     channel
       .on('presence', { event: 'sync' }, () => {
-        if (resolved) return
-        resolved = true
-        const state = channel.presenceState()
-        let count = 0
-        for (const key of Object.keys(state)) {
-          const presences = state[key] as any[]
-          if (presences && presences.some((p: any) => p.role === 'learner')) {
-            count++
-          }
-        }
-        supabase.removeChannel(channel)
-        resolve(count)
+        finish(countLearnersInState(channel.presenceState()))
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -150,13 +186,7 @@ export function getStoryPresenceCount(storyId: string): Promise<number> {
         }
       })
 
-    // Fallback timeout — if no sync event fires within 3s, assume 0
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true
-        supabase.removeChannel(channel)
-        resolve(0)
-      }
-    }, 3000)
+    // Fallback timeout — if no sync event fires within 3 s, assume 0
+    setTimeout(() => finish(0), 3000)
   })
 }
