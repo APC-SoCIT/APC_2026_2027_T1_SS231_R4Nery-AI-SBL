@@ -177,14 +177,14 @@ export default function CreateStoryWizard() {
       <div className={styles.wizardHeader}>
         <div>
           <h2>
-            {step === 1 ? 'Create New Story' : 
-             step === 2 ? 'Generating Story Magic...' : 
-             step === 3 ? 'Review and Edit Story' : 'Final Settings & Save'}
+            {step === 1 ? 'Create New Story' :
+              step === 2 ? 'Generating Story Magic...' :
+                step === 3 ? 'Review and Edit Story' : 'Final Settings & Save'}
           </h2>
           <p>
-            {step === 1 ? 'Configure your story type, options, and topic' : 
-             step === 2 ? 'Our AI is weaving characters, scenes, and tap choices together' : 
-             step === 3 ? 'Tweak the narration, tap choices, and end activities' : 'Publish your story to the database'}
+            {step === 1 ? 'Configure your story type, options, and topic' :
+              step === 2 ? 'Our AI is weaving characters, scenes, and tap choices together' :
+                step === 3 ? 'Tweak the narration, tap choices, and end activities' : 'Publish your story to the database'}
           </p>
         </div>
         <div className={styles.stepIndicator}>
@@ -217,10 +217,10 @@ export default function CreateStoryWizard() {
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Story Title</label>
-                  <input 
+                  <input
                     className={styles.textInput}
-                    value={title} 
-                    onChange={e => setTitle(e.target.value)} 
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
                     placeholder="e.g. The Robot Assistant"
                   />
                 </div>
@@ -228,16 +228,16 @@ export default function CreateStoryWizard() {
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>AI Concept to Teach</label>
-                  <input 
+                  <input
                     className={styles.textInput}
-                    value={concept} 
-                    onChange={e => setConcept(e.target.value)} 
+                    value={concept}
+                    onChange={e => setConcept(e.target.value)}
                     placeholder="e.g. Smart Helpers, Fairness in Technology"
                   />
                 </div>
               </div>
             </div>
-            
+
             <div className={styles.row}>
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
@@ -288,7 +288,7 @@ export default function CreateStoryWizard() {
                   <span className={styles.radioCardTitle}>Tap Choices Only</span>
                   <span className={styles.radioCardDesc}>Learners play through scenes by tapping maximum 2 choices. Simple and quick.</span>
                 </label>
-                
+
                 <label className={`${styles.radioCard} ${storyType === 'with_activity' ? styles.active : ''}`}>
                   <input
                     type="radio"
@@ -368,7 +368,7 @@ export default function CreateStoryWizard() {
               {activeSceneIndex < generatedStory.scenes.length ? (
                 <div>
                   <h3 style={{ margin: '0 0 20px 0' }}>Scene {activeSceneIndex + 1} Editor</h3>
-                  
+
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Scene Title</label>
                     <input
@@ -537,10 +537,10 @@ export default function CreateStoryWizard() {
           {step === 1 ? 'Cancel' : 'Back'}
         </button>
         <button className={styles.btnPrimary} onClick={handleNext} disabled={loading || saving}>
-          {step === 1 ? 'Generate AI Story' : 
-           step === 2 ? 'Generating...' : 
-           step === 3 ? 'Final Settings →' : 
-           (saving ? 'Saving...' : 'Save & Publish')}
+          {step === 1 ? 'Generate AI Story' :
+            step === 2 ? 'Generating...' :
+              step === 3 ? 'Final Settings →' :
+                (saving ? 'Saving...' : 'Save & Publish')}
         </button>
       </div>
     </section>

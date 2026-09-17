@@ -1,7 +1,148 @@
 import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+// ─── Rate Limiter ────────────────────────────────────────────────────────────
+// Simple in-memory sliding-window rate limiter.
+// Resets when the server restarts (acceptable for a project this size).
+
+interface RateWindow {
+  timestamps: number[];
+}
+
+const userWindows = new Map<string, RateWindow>();
+const globalWindow: RateWindow = { timestamps: [] };
+
+const RATE_LIMITS = {
+  USER_PER_MINUTE: 3,    // max 3 generations per user per minute
+  USER_PER_DAY: 100,     // max 100 generations per user per day
+  GLOBAL_PER_MINUTE: 10, // max 10 generations across ALL users per minute
+} as const;
+
+function isRateLimited(
+  userId: string
+): { limited: boolean; retryAfterSec?: number; reason?: string } {
+  const now = Date.now();
+  const oneMinuteAgo = now - 60_000;
+  const oneDayAgo = now - 86_400_000;
+
+  // ── Global check ───────────────────────────────────────────────────────────
+  globalWindow.timestamps = globalWindow.timestamps.filter((t) => t > oneMinuteAgo);
+  if (globalWindow.timestamps.length >= RATE_LIMITS.GLOBAL_PER_MINUTE) {
+    const oldest = globalWindow.timestamps[0];
+    return {
+      limited: true,
+      retryAfterSec: Math.ceil((oldest + 60_000 - now) / 1000),
+      reason: 'Too many AI requests globally. Please wait a moment.',
+    };
+  }
+
+  // ── Per-user check ─────────────────────────────────────────────────────────
+  if (!userWindows.has(userId)) {
+    userWindows.set(userId, { timestamps: [] });
+  }
+  const userWin = userWindows.get(userId)!;
+
+  // Per-minute
+  const recentMinute = userWin.timestamps.filter((t) => t > oneMinuteAgo);
+  if (recentMinute.length >= RATE_LIMITS.USER_PER_MINUTE) {
+    const oldest = recentMinute[0];
+    return {
+      limited: true,
+      retryAfterSec: Math.ceil((oldest + 60_000 - now) / 1000),
+      reason: `You can generate up to ${RATE_LIMITS.USER_PER_MINUTE} stories per minute. Please wait.`,
+    };
+  }
+
+  // Per-day
+  const recentDay = userWin.timestamps.filter((t) => t > oneDayAgo);
+  if (recentDay.length >= RATE_LIMITS.USER_PER_DAY) {
+    return {
+      limited: true,
+      retryAfterSec: Math.ceil((recentDay[0] + 86_400_000 - now) / 1000),
+      reason: `Daily AI generation limit (${RATE_LIMITS.USER_PER_DAY}) reached. Try again tomorrow.`,
+    };
+  }
+
+  return { limited: false };
+}
+
+function recordRequest(userId: string) {
+  const now = Date.now();
+  globalWindow.timestamps.push(now);
+
+  if (!userWindows.has(userId)) {
+    userWindows.set(userId, { timestamps: [] });
+  }
+  userWindows.get(userId)!.timestamps.push(now);
+}
+
+// ─── Auth Helper ─────────────────────────────────────────────────────────────
+
+async function getAuthenticatedAdmin() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(toSet) {
+          try { toSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); }
+          catch { /* ignore in Route Handler context */ }
+        },
+      },
+    }
+  );
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) return { user: null, role: null };
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('user_id', user.id)
+    .single();
+
+  return { user, role: profile?.role ?? 'guest' };
+}
+
+// ─── Route Handler ───────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
+    // ── 1. Auth: require admin role ────────────────────────────────────────
+    const { user, role } = await getAuthenticatedAdmin();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized — please sign in.' },
+        { status: 401 }
+      );
+    }
+
+    if (role !== 'admin' && role !== 'facilitator') {
+      return NextResponse.json(
+        { error: 'Forbidden — only admins can generate stories.' },
+        { status: 403 }
+      );
+    }
+
+    // ── 2. Rate limiting ───────────────────────────────────────────────────
+    const rateCheck = isRateLimited(user.id);
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { error: rateCheck.reason },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.retryAfterSec ?? 60),
+          },
+        }
+      );
+    }
+
+    // ── 3. Parse request body ──────────────────────────────────────────────
     const body = await request.json();
     const { title, concept, genre, type = 'choices_only', sceneCount = 3 } = body;
 
@@ -78,6 +219,11 @@ Return ONLY valid JSON matching this exact structure:
   }` : `"activity": null`}
 }`;
 
+    // ── 4. Record the request AFTER validation, BEFORE the API call ────────
+    recordRequest(user.id);
+    const startTime = Date.now();
+
+    // ── 5. Call the AI provider ────────────────────────────────────────────
     if (process.env.GEMINI_API_KEY) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
       const res = await fetch(url, {
@@ -89,9 +235,24 @@ Return ONLY valid JSON matching this exact structure:
         })
       });
 
+      const durationMs = Date.now() - startTime;
+
       if (res.ok) {
         const json = await res.json();
         const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        const usage = json.usageMetadata;
+
+        console.log('[AI Usage]', {
+          userId: user.id,
+          provider: 'gemini',
+          model: 'gemini-2.0-flash',
+          promptTokens: usage?.promptTokenCount ?? '?',
+          outputTokens: usage?.candidatesTokenCount ?? '?',
+          totalTokens: usage?.totalTokenCount ?? '?',
+          durationMs,
+          status: 'success',
+        });
+
         if (rawText) {
           try {
             const parsed = JSON.parse(rawText);
@@ -103,7 +264,14 @@ Return ONLY valid JSON matching this exact structure:
         }
       } else {
         const errorText = await res.text();
-        console.error('[AI Story Gen] Gemini API error:', errorText);
+        console.error('[AI Usage]', {
+          userId: user.id,
+          provider: 'gemini',
+          model: 'gemini-2.0-flash',
+          durationMs,
+          status: 'error',
+          error: errorText.slice(0, 200),
+        });
         return NextResponse.json({ error: 'Failed to generate story from Gemini API' }, { status: 500 });
       }
     } else if (process.env.GROQ_API_KEY) {
@@ -121,9 +289,34 @@ Return ONLY valid JSON matching this exact structure:
         })
       });
 
+      const durationMs = Date.now() - startTime;
+
       if (res.ok) {
         const json = await res.json();
         const rawText = json.choices?.[0]?.message?.content;
+        const usage = json.usage;
+
+        // Groq returns { prompt_tokens, completion_tokens, total_tokens }
+        const promptTokens = usage?.prompt_tokens ?? 0;
+        const outputTokens = usage?.completion_tokens ?? 0;
+        const totalTokens = usage?.total_tokens ?? 0;
+
+        // Estimated cost based on Groq pricing: $0.15/M input, $0.60/M output
+        const estimatedCostUsd =
+          (promptTokens * 0.15 + outputTokens * 0.60) / 1_000_000;
+
+        console.log('[AI Usage]', {
+          userId: user.id,
+          provider: 'groq',
+          model: 'openai/gpt-oss-120b',
+          promptTokens,
+          outputTokens,
+          totalTokens,
+          estimatedCostUsd: `$${estimatedCostUsd.toFixed(6)}`,
+          durationMs,
+          status: 'success',
+        });
+
         if (rawText) {
           try {
             const parsed = JSON.parse(rawText);
@@ -135,7 +328,14 @@ Return ONLY valid JSON matching this exact structure:
         }
       } else {
         const errorText = await res.text();
-        console.error('[AI Story Gen] Groq API error:', errorText);
+        console.error('[AI Usage]', {
+          userId: user.id,
+          provider: 'groq',
+          model: 'openai/gpt-oss-120b',
+          durationMs,
+          status: 'error',
+          error: errorText.slice(0, 200),
+        });
         return NextResponse.json({ error: 'Failed to generate story from Groq API' }, { status: 500 });
       }
     } else {
@@ -149,6 +349,3 @@ Return ONLY valid JSON matching this exact structure:
     return NextResponse.json({ error: err?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-
-
-
