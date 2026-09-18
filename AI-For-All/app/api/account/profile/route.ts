@@ -41,9 +41,9 @@ export async function GET() {
   }
 
   const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('id, name, role, created_at, updated_at')
-    .eq('id', user.id)
+    .from('users')
+    .select('user_id, username, user_sname, role, created_at')
+    .eq('user_id', user.id)
     .single()
 
   if (error) {
@@ -51,13 +51,12 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    id: profile.id,
-    name: profile.name,
+    id: profile.user_id,
+    name: profile.username,
     email: user.email,
     role: profile.role,
     authMethod: user.app_metadata?.provider ?? 'email',
     createdAt: profile.created_at,
-    updatedAt: profile.updated_at,
   })
 }
 
@@ -81,12 +80,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Name must be 255 characters or fewer.' }, { status: 400 })
   }
 
-  // Update the profiles row (RLS allows only the owner to update their own row).
+  // Update the users row (RLS allows only the owner to update their own row).
   const { data: updated, error: updateErr } = await supabase
-    .from('profiles')
-    .update({ name, updated_at: new Date().toISOString() })
-    .eq('id', user.id)
-    .select('id, name, role, updated_at')
+    .from('users')
+    .update({ username: name })
+    .eq('user_id', user.id)
+    .select('user_id, username, role')
     .single()
 
   if (updateErr) {
@@ -109,10 +108,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   return NextResponse.json({
-    id: updated.id,
-    name: updated.name,
+    id: updated.user_id,
+    name: updated.username,
     email: user.email,
     role: updated.role,
-    updatedAt: updated.updated_at,
   })
 }
