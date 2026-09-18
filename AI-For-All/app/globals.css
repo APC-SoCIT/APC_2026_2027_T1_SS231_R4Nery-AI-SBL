@@ -466,4 +466,251 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .prof-confirm-cancel { flex:1; min-height:44px; border-radius:12px; border:1.5px solid var(--line); background:#fff; color:var(--ink); font-weight:700; font-size:13px; cursor:pointer; }
 
 /* Loading shimmer */
-.prof-loading { display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--apc-pale); color:var(--muted); font-size:14px; }
+.prof-loading { display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--apc-pale); color:var(--muted); font-size:14px; }
+
+/* ─── Archive page (/archive) ───────────────────────────────────────────────── */
+.archive-page {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--lavender);
+  color: var(--apc-navy-deep);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.archive-header {
+  padding: 52px 24px 20px;
+  flex: none;
+}
+.archive-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin: 0 0 16px;
+  color: var(--apc-navy-deep);
+}
+
+/* Search + filter row */
+.archive-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.archive-search-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 46px;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(23,36,74,.07);
+}
+.archive-search-icon { color: var(--muted); flex: none; }
+.archive-search-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--apc-navy-deep);
+}
+.archive-search-input::placeholder { color: var(--muted); }
+/* Hide the browser's native clear-X on search inputs */
+.archive-search-input::-webkit-search-cancel-button { display: none; }
+
+.archive-filter-wrap { position: relative; }
+.archive-filter-btn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(23,36,74,.07);
+  color: var(--muted);
+  border: 0;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.archive-filter-btn.active,
+.archive-filter-btn:hover {
+  background: var(--apc-navy-deep);
+  color: #fff;
+}
+.archive-filter-menu {
+  position: absolute;
+  z-index: 30;
+  top: 54px;
+  right: 0;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 2px;
+}
+.archive-filter-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 9px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+}
+.archive-filter-menu button:hover { background: var(--lavender); color: var(--apc-navy-deep); }
+.archive-filter-menu button.active { background: var(--apc-navy-deep); color: #fff; }
+
+/* Scrollable body */
+.archive-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 120px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Empty states */
+.archive-empty-state {
+  padding: 48px 24px;
+  text-align: center;
+}
+.archive-empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.archive-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 28px;
+  border-radius: 14px;
+  background: var(--apc-navy-deep);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+/* ── Stacked wavy card list ───────────────────────────────────────────────── */
+.archive-stack-list {
+  display: flex;
+  flex-direction: column;
+  /* cards overlap so we need no gap — negative margin is applied per-card */
+}
+
+.archive-stack-card {
+  position: relative;
+  background: var(--card-bg, #c9b8f0);
+  color: var(--card-tc, #17244a);
+  /* Pull each card up so its wavy top overlaps the previous card's bottom wave */
+  margin-top: -22px;
+  cursor: pointer;
+  transition: filter .15s;
+  /* First card should have a top margin so it sits below the header */
+  min-height: 64px;
+}
+.archive-stack-card:first-child { margin-top: 0; border-radius: 28px 28px 0 0; }
+.archive-stack-card:last-child  { border-radius: 0 0 28px 28px; }
+.archive-stack-card:hover { filter: brightness(1.03); }
+.archive-stack-card:focus-visible { outline: 3px solid var(--coral); outline-offset: -3px; }
+
+/* Main content row inside each card */
+.archive-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px 28px;
+  gap: 12px;
+}
+
+.archive-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+
+.archive-card-percent {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .85;
+  flex: none;
+}
+
+/* Expanded detail section */
+.archive-card-detail {
+  padding: 0 24px 24px;
+  animation: card-expand .2s ease;
+}
+@keyframes card-expand {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.archive-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.archive-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0,0,0,.2);
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  background: transparent;
+}
+
+.archive-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.archive-card-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .85;
+}
+.archive-check-icon { flex: none; }
+
+.archive-card-replay {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.25);
+  color: inherit;
+  text-decoration: none;
+  flex: none;
+  transition: background .15s;
+}
+.archive-card-replay:hover { background: rgba(255,255,255,.45); }
+
+/* SVG wave that sits at the bottom of each non-last card */
+.archive-card-wave {
+  display: block;
+  width: 100%;
+  /* height must match the SVG viewBox aspect — 40/390 ≈ 10.25% */
+  height: 38px;
+  margin-top: -2px; /* close tiny gap between card bottom and wave */
+  pointer-events: none;
+}
+
