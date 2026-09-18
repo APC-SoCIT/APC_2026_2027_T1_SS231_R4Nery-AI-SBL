@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
 import { GoogleIcon } from '@/components/auth/social-icons'
 import { createClient } from '@/lib/supabase/client'
-import { mockSignUp } from '@/lib/mock-auth'
+import { mockSignUp, shouldUseMockAuth } from '@/lib/mock-auth'
 
 const SUPABASE_ERRORS: Record<string, string> = {
   user_already_exists: 'An account with this email already exists.',
@@ -61,7 +61,12 @@ export default function SignUpPage() {
 
     setSubmitting(true)
     try {
-      if (!SUPABASE_CONFIGURED) {
+      // Use mock auth only under the same conditions sign-in uses it
+      // (no Supabase env vars, or running on localhost). Previously this
+      // page fell back to mock auth any time env vars were missing,
+      // regardless of host — inconsistent with sign-in and a source of
+      // confusing "wrong account" behaviour on deployed environments.
+      if (!SUPABASE_CONFIGURED || shouldUseMockAuth()) {
         const result = mockSignUp(name, trimmedEmail, password)
         if (!result.ok) { setError(result.error); return }
         router.push('/home')
@@ -69,7 +74,16 @@ export default function SignUpPage() {
       }
 
       const supabase = createClient()
-      const { error: sbError } = await supabase.auth.signUp({
+
+      // Clear out any previously-active session BEFORE creating a new
+      // account. Without this, if email confirmation is required and the
+      // confirmation email never arrives (e.g. no SMTP configured), the
+      // old session just keeps sitting there — so /home silently keeps
+      // showing whoever was last actually signed in, no matter which new
+      // account you just tried to create.
+      await supabase.auth.signOut()
+
+      const { data: signUpData, error: sbError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
         options: { data: { name: name.trim() } },
@@ -80,7 +94,15 @@ export default function SignUpPage() {
         return
       }
 
-      // Supabase sends a confirmation link to the user's email.
+      // If email confirmation is OFF in Supabase (common for dev/testing
+      // without SMTP set up), signUp() returns an active session right
+      // away — skip the "check your inbox" screen and go straight in.
+      if (signUpData.session) {
+        router.push('/home')
+        return
+      }
+
+      // Otherwise Supabase is waiting on a confirmation email/link.
       // Redirect to the "check your inbox" screen so they know what to do next.
       router.push(`/auth/check-email?email=${encodeURIComponent(trimmedEmail)}`)
     } finally {

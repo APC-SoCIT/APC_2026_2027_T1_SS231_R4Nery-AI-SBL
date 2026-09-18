@@ -59,6 +59,13 @@ export default function SignInPage() {
       }
 
       const supabase = createClient()
+
+      // Always clear any existing session before signing in. If a previous
+      // login/signup attempt on this browser left a session behind (e.g. an
+      // unconfirmed signup, or a failed attempt), signing in as someone new
+      // could otherwise leave stale cookies around alongside the new ones.
+      await supabase.auth.signOut()
+
       const { data: authData, error: sbError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password,
