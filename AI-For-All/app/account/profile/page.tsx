@@ -122,7 +122,7 @@ export default function AccountProfilePage() {
   return (
     <main className="simple-page">
       {/* Back */}
-      <Link href="/home" className="acct-back">
+      <Link href="/profile" className="acct-back">
         <ArrowLeft size={18} />
       </Link>
 
