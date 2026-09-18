@@ -80,10 +80,9 @@ export default function SignUpPage() {
         return
       }
 
-      // Supabase sends a 6-digit OTP to the email (when Email OTP is enabled in
-      // the Supabase dashboard).  Redirect the user to the verify-otp page so
-      // they can enter that code and get a real session.
-      router.push(`/auth/verify-otp?email=${encodeURIComponent(trimmedEmail)}`)
+      // Supabase sends a confirmation link to the user's email.
+      // Redirect to the "check your inbox" screen so they know what to do next.
+      router.push(`/auth/check-email?email=${encodeURIComponent(trimmedEmail)}`)
     } finally {
       setSubmitting(false)
     }
