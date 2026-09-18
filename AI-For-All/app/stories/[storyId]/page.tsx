@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send, Sun, Lock, BookOpen, Star } from 'lucide-react'
@@ -50,12 +50,31 @@ export default function StoryScenePage() {
   const isGuest = !session || session.role === 'guest'
   const [showSignupPrompt, setShowSignupPrompt] = useState(false)
 
-  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
-  useEffect(() => {
-    if (step === 'cleared' && isGuest) {
-      setShowSignupPrompt(true)
+  // Save progress to the database when a registered user completes a story.
+  const saveProgress = useCallback(async (storyId: string) => {
+    if (isGuest) return // guests have no account to save to
+    try {
+      await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId }),
+      })
+    } catch {
+      // Non-fatal — progress save failure should not interrupt the UX
     }
-  }, [step, isGuest])
+  }, [isGuest])
+
+  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
+  // and save progress when a registered user clears the story.
+  useEffect(() => {
+    if (step === 'cleared') {
+      if (isGuest) {
+        setShowSignupPrompt(true)
+      } else if (story) {
+        saveProgress(story.id)
+      }
+    }
+  }, [step, isGuest, story, saveProgress])
 
   if (loading) {
     return (
@@ -101,6 +120,7 @@ export default function StoryScenePage() {
       return
     }
     // Last scene answered — decide what comes next.
+    // Progress is saved in the useEffect that watches step === 'cleared'.
     if (story.type === 'with_activity') {
       setStep(gatedActivity ? 'gate' : 'activity')
     } else {

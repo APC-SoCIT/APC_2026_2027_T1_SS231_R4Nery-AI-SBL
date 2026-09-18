@@ -59,7 +59,14 @@ export default function SignInPage() {
       }
 
       const supabase = createClient()
-      const { error: sbError } = await supabase.auth.signInWithPassword({
+
+      // Always clear any existing session before signing in. If a previous
+      // login/signup attempt on this browser left a session behind (e.g. an
+      // unconfirmed signup, or a failed attempt), signing in as someone new
+      // could otherwise leave stale cookies around alongside the new ones.
+      await supabase.auth.signOut()
+
+      const { data: authData, error: sbError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password,
       })
@@ -67,6 +74,20 @@ export default function SignInPage() {
       if (sbError) {
         setError(mapError((sbError as { code?: string }).code, sbError.message))
         return
+      }
+
+      // Check the user's role to redirect admins/facilitators to the admin area
+      if (authData.user) {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('role')
+          .eq('user_id', authData.user.id)
+          .single()
+
+        if (userRow?.role === 'admin' || userRow?.role === 'facilitator') {
+          router.push('/admin')
+          return
+        }
       }
 
       router.push('/home')

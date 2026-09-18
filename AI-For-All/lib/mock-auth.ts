@@ -3,19 +3,25 @@ export type MockUser = { name: string; email: string; role: 'registered' | 'admi
 type MockAccount = { email: string; password: string; name: string; role: MockUser['role'] }
 
 const MOCK_ACCOUNTS: MockAccount[] = [
-  { email: 'user@aiforall.test', password: 'User123!', name: 'Registered Learner', role: 'registered' },
-  { email: 'admin@aiforall.test', password: 'Admin123!', name: 'Admin', role: 'admin' },
+  { email: 'user@aiforall.test', password: 'user', name: 'Test User', role: 'registered' },
+  { email: 'admin@aiforall.test', password: 'admin', name: 'Test Admin', role: 'admin' },
 ]
 
 const STORAGE_KEY = 'ai-for-all:mock-session'
 
 export function isMockEmail(email: string): boolean {
+  // When Supabase is configured, these accounts exist as real auth users — don't mock them
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return false
   const normalized = email.trim().toLowerCase()
   return MOCK_ACCOUNTS.some((account) => account.email.toLowerCase() === normalized)
 }
 
 export function shouldUseMockAuth(): boolean {
   if (typeof window === 'undefined') return false
+  // Only use mock auth if Supabase is NOT configured.
+  // When Supabase is configured (even on localhost), use real auth
+  // so server-side API routes can see the authenticated session.
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return false
   const host = window.location.hostname
   return host === 'localhost' || host === '127.0.0.1' || host.startsWith('localhost.')
 }

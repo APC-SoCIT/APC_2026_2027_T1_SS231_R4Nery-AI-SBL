@@ -53,13 +53,13 @@ function deriveAuthMethod(user: User): UserSession['authMethod'] {
   return 'email' // default for any other email-based provider
 }
 
-function buildSession(user: User): UserSession {
+function buildSession(user: User, role?: string): UserSession {
   const isGuest = user.is_anonymous ?? false
   return {
     sessionId: user.id,
     userId: user.id,
     isGuest,
-    role: isGuest ? 'guest' : 'user',
+    role: (role as UserSession['role']) || (isGuest ? 'guest' : 'user'),
     authMethod: deriveAuthMethod(user),
     emailVerified: user.email_confirmed_at !== null && user.email_confirmed_at !== undefined,
     completedModules: [],
@@ -92,7 +92,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    setSession(user ? buildSession(user) : null)
+    if (user) {
+      // Fetch the role from the `users` table
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+
+      setSession(buildSession(user, userRow?.role))
+    } else {
+      setSession(null)
+    }
     setLoading(false)
   }, [])
 
