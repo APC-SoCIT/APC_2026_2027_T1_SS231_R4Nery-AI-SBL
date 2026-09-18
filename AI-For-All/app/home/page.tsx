@@ -4,22 +4,24 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bookmark, BookOpen, ChevronRight } from 'lucide-react'
-import { getMockSession, type MockUser } from '@/lib/mock-auth'
+import { useSession } from '@/lib/sessionContext'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
+import { createClient } from '@/lib/supabase/client'
 
 type Snap = 'hero' | 'default' | 'expanded'
 const SNAP_TOP: Record<Snap, number> = { hero: 60, default: 40, expanded: 10 }
 const SNAP_ORDER: Snap[] = ['hero', 'default', 'expanded']
 
-const goalItems = [
-  { key: 'basics', icon: '/ai-for-all/goal-icon-target.png', title: 'Understand AI Basics', progress: '2 of 5 stories completed', percent: 40 },
-  { key: 'helps-us', icon: '/ai-for-all/goal-icon-brain.png', title: 'How AI Helps Us', progress: '1 of 4 stories completed', percent: 25 },
-]
+interface UserProgress {
+  completedModules: string[]
+  totalPoints: number
+}
 
-const completedItems = [
-  { key: 'study-buddy', title: 'Study Buddy', color: '#6f8ce8' },
-  { key: 'train-bot', title: 'Train Your Bot', color: '#ff7a45' },
-]
+interface StoryInfo {
+  id: string
+  title: string
+  color: string
+}
 
 function ProgressRing({ percent }: { percent: number }) {
   const r = 16
@@ -44,24 +46,120 @@ function ProgressRing({ percent }: { percent: number }) {
   )
 }
 
+const STORY_COLORS: Record<string, string> = {
+  'story-study-buddy': '#6f8ce8',
+  'story-train-your-bot': '#ff7a45',
+  'story-trust-the-system': '#66cf9e',
+}
+
+function colorForStory(id: string): string {
+  return STORY_COLORS[id] ?? '#8dcdf4'
+}
+
 export default function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<MockUser | null | 'checking'>('checking')
+  const { session, loading: sessionLoading } = useSession()
+  const [progress, setProgress] = useState<UserProgress | null>(null)
+  const [allStories, setAllStories] = useState<StoryInfo[]>([])
+  const [progressLoading, setProgressLoading] = useState(true)
+  const [displayName, setDisplayName] = useState<string>('')
+
   const [snap, setSnap] = useState<Snap>('default')
   const [dragTop, setDragTop] = useState<number | null>(null)
   const startYRef = useRef<number | null>(null)
   const startTopRef = useRef<number>(SNAP_TOP.default)
 
+  // ── Redirect if not authenticated ─────────────────────────────────────────
   useEffect(() => {
-    const session = getMockSession()
-    if (!session) {
+    if (!sessionLoading && !session) {
       router.replace('/sign-in')
-      return
     }
-    setUser(session)
-  }, [router])
+  }, [session, sessionLoading, router])
 
-  if (user === 'checking' || user === null) return null
+  // ── Fetch real user name from the users table ──────────────────────────────
+  useEffect(() => {
+    if (!session) return
+    async function fetchName() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('users')
+        .select('username')
+        .eq('user_id', session!.userId)
+        .maybeSingle()
+      if (data?.username) {
+        setDisplayName(data.username)
+      } else {
+        // Fallback: use the email prefix
+        const { data: { user } } = await supabase.auth.getUser()
+        setDisplayName(user?.email?.split('@')[0] ?? 'Learner')
+      }
+    }
+    fetchName()
+  }, [session])
+
+  // ── Fetch real per-user progress ───────────────────────────────────────────
+  useEffect(() => {
+    if (!session) return
+    async function loadProgress() {
+      setProgressLoading(true)
+      try {
+        const res = await fetch('/api/progress')
+        if (res.ok) {
+          const data = await res.json()
+          setProgress(data)
+        }
+      } catch {
+        // Non-fatal — show empty progress on error
+      } finally {
+        setProgressLoading(false)
+      }
+    }
+    loadProgress()
+  }, [session])
+
+  // ── Fetch published story list to show titles for completed stories ─────────
+  useEffect(() => {
+    if (!session) return
+    async function loadStories() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('stories')
+        .select('id, title, color')
+        .eq('status', 'Published')
+        .order('created_at', { ascending: false })
+      if (data) {
+        setAllStories(data.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          color: s.color || colorForStory(s.id),
+        })))
+      }
+    }
+    loadStories()
+  }, [session])
+
+  // ── Show nothing while session is initialising ─────────────────────────────
+  if (sessionLoading || !session) return null
+
+  // ── Derive stats from real data ────────────────────────────────────────────
+  const completedIds: string[] = progress?.completedModules ?? []
+  const completedCount = completedIds.length
+  const totalStories = allStories.length || 3 // fallback when stories haven't loaded yet
+  const completedStories: StoryInfo[] = completedIds
+    .map((id) => allStories.find((s) => s.id === id))
+    .filter((s): s is StoryInfo => !!s)
+
+  // Derive a simple goal progress: user is working toward completing all published stories
+  const goalPercent = totalStories > 0 ? Math.round((completedCount / totalStories) * 100) : 0
+  const goalItems = [
+    {
+      key: 'all-stories',
+      icon: '/ai-for-all/goal-icon-target.png',
+      title: 'Understand AI Basics',
+      progress: `${completedCount} of ${totalStories} stories completed`,
+      percent: goalPercent,
+    },
+  ]
 
   const currentTop = dragTop ?? SNAP_TOP[snap]
 
@@ -128,23 +226,32 @@ export default function HomePage() {
         </div>
 
         <div className="home-sheet-content">
+          {/* Greeting */}
+          {displayName && (
+            <p className="home-greeting">
+              Hi, <strong>{displayName}!</strong>
+            </p>
+          )}
+
+          {/* Stats — real per-user data */}
           <div className="home-stats">
             <div className="home-stat home-stat-purple">
-              <strong>3</strong>
-              <span>Stories</span>
-              <small>Continue learning</small>
+              <strong>{progressLoading ? '…' : completedCount}</strong>
+              <span>Completed</span>
+              <small>Stories done</small>
             </div>
             <div className="home-stat home-stat-peach">
-              <strong>2</strong>
-              <span>Goals</span>
-              <small>In progress</small>
+              <strong>{progressLoading ? '…' : Math.max(0, totalStories - completedCount)}</strong>
+              <span>Remaining</span>
+              <small>Stories left</small>
             </div>
             <div className="home-stat home-stat-blue">
               <strong>
-                48<span className="unit">mins</span>
+                {progressLoading ? '…' : (progress?.totalPoints ?? 0)}
+                <span className="unit">pts</span>
               </strong>
-              <span>This week</span>
-              <small>Keep it up!</small>
+              <span>Points</span>
+              <small>Keep learning!</small>
             </div>
           </div>
 
@@ -161,6 +268,7 @@ export default function HomePage() {
             </span>
           </Link>
 
+          {/* Goal Board — shows real progress */}
           <h3 className="home-section-title">Goal Board</h3>
           <div className="home-goal-list">
             {goalItems.map((goal) => (
@@ -168,13 +276,14 @@ export default function HomePage() {
                 <img src={goal.icon} alt="" className="home-goal-icon" />
                 <span className="home-goal-text">
                   <strong>{goal.title}</strong>
-                  <small>{goal.progress}</small>
+                  <small>{progressLoading ? 'Loading…' : goal.progress}</small>
                 </span>
-                <ProgressRing percent={goal.percent} />
+                <ProgressRing percent={progressLoading ? 0 : goal.percent} />
               </div>
             ))}
           </div>
 
+          {/* Completed Stories — real per-user list */}
           <div className="home-section-heading">
             <h3 className="home-section-title">Completed Stories</h3>
             <Link href="/archive" className="home-view-all">
@@ -182,16 +291,24 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="home-completed-list">
-            {completedItems.map((item) => (
-              <div className="home-completed-item" key={item.key}>
-                <span className="home-completed-swatch" style={{ background: item.color }} />
-                <span className="home-completed-text">
-                  <strong>{item.title}</strong>
-                  <small>Completed</small>
-                </span>
-                <Bookmark size={18} className="home-completed-bookmark" />
-              </div>
-            ))}
+            {progressLoading ? (
+              <p style={{ color: 'var(--muted)', fontSize: 13, padding: '8px 0' }}>Loading…</p>
+            ) : completedStories.length === 0 ? (
+              <p style={{ color: 'var(--muted)', fontSize: 13, padding: '8px 0' }}>
+                No stories completed yet — start one!
+              </p>
+            ) : (
+              completedStories.slice(0, 3).map((item) => (
+                <div className="home-completed-item" key={item.id}>
+                  <span className="home-completed-swatch" style={{ background: item.color }} />
+                  <span className="home-completed-text">
+                    <strong>{item.title}</strong>
+                    <small>Completed</small>
+                  </span>
+                  <Bookmark size={18} className="home-completed-bookmark" />
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
