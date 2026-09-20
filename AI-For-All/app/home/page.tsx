@@ -1,3 +1,4 @@
+// Path: app/home/page.tsx
 'use client'
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
@@ -5,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bookmark, BookOpen, ChevronRight } from 'lucide-react'
 import { getMockSession, type MockUser } from '@/lib/mock-auth'
+import { useSession } from '@/lib/sessionContext'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
 
 type Snap = 'hero' | 'default' | 'expanded'
@@ -46,6 +48,7 @@ function ProgressRing({ percent }: { percent: number }) {
 
 export default function HomePage() {
   const router = useRouter()
+  const { session, loading: sessionLoading } = useSession()
   const [user, setUser] = useState<MockUser | null | 'checking'>('checking')
   const [snap, setSnap] = useState<Snap>('default')
   const [dragTop, setDragTop] = useState<number | null>(null)
@@ -53,13 +56,21 @@ export default function HomePage() {
   const startTopRef = useRef<number>(SNAP_TOP.default)
 
   useEffect(() => {
-    const session = getMockSession()
-    if (!session) {
-      router.replace('/sign-in')
+    const mockSession = getMockSession()
+    if (mockSession) {
+      setUser(mockSession)
       return
     }
-    setUser(session)
-  }, [router])
+
+    if (sessionLoading) return
+
+    if (session && !session.isGuest) {
+      setUser({ name: 'Learner', email: '', role: 'registered' })
+      return
+    }
+
+    router.replace('/sign-in')
+  }, [router, session, sessionLoading])
 
   if (user === 'checking' || user === null) return null
 
@@ -111,8 +122,8 @@ export default function HomePage() {
 
       <img
         className="home-mascot"
-        style={{ top: `calc(${currentTop}vh - 126px)` }}
-        src="/ai-for-all/Story-Ai-Mascot.png"
+        style={{ top: `calc(${currentTop}vh - 260px)` }}
+        src="/ai-for-all/Mascot-look-down.png"
         alt=""
         aria-hidden="true"
       />
