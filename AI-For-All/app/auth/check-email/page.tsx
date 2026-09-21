@@ -39,7 +39,13 @@ function CheckEmailInner() {
     setResendError('')
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.resend({ type: 'signup', email })
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        // Same fix as the initial signUp() call — without this the resent
+        // link falls back to the dashboard's "Site URL" (localhost).
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
       if (error) {
         setResendStatus('error')
         setResendError(error.message)
