@@ -341,6 +341,10 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .story-icon-btn { width:34px; height:34px; display:grid; place-items:center; border-radius:9px; background:var(--lavender); color:var(--ink); flex-shrink:0; }
 .story-icon-btn:hover { background:var(--lavender-deep); }
 .story-empty { padding:3rem 1rem; text-align:center; color:var(--muted); }
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.4); }
+}
 @media (max-width:760px) {
   .story-stat-row { grid-template-columns:repeat(2,1fr); }
   .story-toolbar { flex-wrap:wrap; }

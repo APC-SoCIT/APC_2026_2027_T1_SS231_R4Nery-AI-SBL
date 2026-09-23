@@ -47,29 +47,36 @@ function StoryRowItem({
         <small>{story.category} &middot; {story.level} &middot; {story.scenes?.length || 0} scenes</small>
       </div>
 
-      {hasLiveUsers && (
-        <div 
-          className="story-live-users" 
-          title={`${activeLearners} live learner(s)`} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px', 
-            color: '#10b981', 
-            fontSize: '0.75rem', 
-            marginLeft: 'auto',
-            marginRight: '0.5rem',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            padding: '2px 8px',
-            borderRadius: '999px',
-            fontWeight: '600'
-          }}
-        >
-          <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} />
-          <Users size={12} />
-          <span>{activeLearners} Live User{activeLearners !== 1 ? 's' : ''}</span>
-        </div>
-      )}
+      {/* Live user count — always visible */}
+      <div
+        className="story-live-users"
+        title={hasLiveUsers ? `${activeLearners} live learner(s) on this story` : 'No active learners'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          color: hasLiveUsers ? '#10b981' : 'var(--muted, #888)',
+          fontSize: '0.75rem',
+          marginLeft: 'auto',
+          marginRight: '0.5rem',
+          backgroundColor: hasLiveUsers ? 'rgba(16, 185, 129, 0.1)' : 'rgba(128,128,128,0.08)',
+          padding: '2px 8px',
+          borderRadius: '999px',
+          fontWeight: '600',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <div style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          backgroundColor: hasLiveUsers ? '#10b981' : '#aaa',
+          flexShrink: 0,
+          animation: hasLiveUsers ? 'livePulse 1.5s ease-in-out infinite' : 'none',
+        }} />
+        <Users size={12} />
+        <span>{activeLearners} Live{activeLearners !== 1 ? '' : ''}</span>
+      </div>
 
       <button
         className={`story-status-pill status-${story.status.toLowerCase()}`}
@@ -81,25 +88,26 @@ function StoryRowItem({
         {story.status}
       </button>
 
-      <button 
-        className="story-icon-btn" 
-        onClick={() => handleEdit(story)} 
-        title={hasLiveUsers ? 'Cannot edit with live learners' : 'Edit story'}
-        disabled={hasLiveUsers}
-        style={{ opacity: hasLiveUsers ? 0.5 : 1, cursor: hasLiveUsers ? 'not-allowed' : 'pointer' }}
-      >
-        <Pencil size={16} />
-      </button>
+      {/* Edit and Archive buttons are hidden while there are live learners */}
+      {!hasLiveUsers && (
+        <>
+          <button
+            className="story-icon-btn"
+            onClick={() => handleEdit(story)}
+            title="Edit story"
+          >
+            <Pencil size={16} />
+          </button>
 
-      <button
-        className="story-icon-btn"
-        onClick={() => handleToggleArchive(story)}
-        title={hasLiveUsers ? `Cannot ${isArchived ? 'restore' : 'archive'} with live learners` : (isArchived ? 'Restore story' : 'Archive story')}
-        disabled={hasLiveUsers}
-        style={{ opacity: hasLiveUsers ? 0.5 : 1, cursor: hasLiveUsers ? 'not-allowed' : 'pointer' }}
-      >
-        {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-      </button>
+          <button
+            className="story-icon-btn"
+            onClick={() => handleToggleArchive(story)}
+            title={isArchived ? 'Restore story' : 'Archive story'}
+          >
+            {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+          </button>
+        </>
+      )}
     </div>
   )
 }

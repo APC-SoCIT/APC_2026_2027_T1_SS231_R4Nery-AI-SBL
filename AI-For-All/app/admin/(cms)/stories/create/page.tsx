@@ -390,7 +390,7 @@ export default function CreateStoryWizard() {
 
                   <div className={styles.choiceGrid}>
                     <div className={styles.choiceBox}>
-                      <h5>Choice A (+1 Intellect)</h5>
+                      <h5>Choice A</h5>
                       <textarea
                         className={styles.textArea}
                         style={{ minHeight: '80px' }}
@@ -400,7 +400,7 @@ export default function CreateStoryWizard() {
                       />
                     </div>
                     <div className={styles.choiceBox}>
-                      <h5>Choice B (-1 Creative)</h5>
+                      <h5>Choice B</h5>
                       <textarea
                         className={styles.textArea}
                         style={{ minHeight: '80px' }}
