@@ -8,8 +8,9 @@ import { trackStoryPresence } from '@/lib/supabase/presence'
 import { StoryModule } from '@/lib/story-data'
 import { useSession } from '@/lib/sessionContext'
 import { SignupPrompt } from '@/components/auth/signup-prompt'
+import { StoryReaction } from '@/components/story/story-reaction'
 
-type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'cleared' | 'not-found'
+type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
@@ -65,14 +66,15 @@ export default function StoryScenePage() {
   }, [isGuest])
 
   // Auto-open the sign-up prompt when a guest clears the story (P1.6)
-  // and save progress when a registered user clears the story.
+  // and save progress when a registered user finishes the story (the
+  // Reaction Page is the first screen after the last story step).
   useEffect(() => {
     if (step === 'cleared') {
       if (isGuest) {
         setShowSignupPrompt(true)
-      } else if (story) {
-        saveProgress(story.id)
       }
+    } else if (step === 'reaction' && !isGuest && story) {
+      saveProgress(story.id)
     }
   }, [step, isGuest, story, saveProgress])
 
@@ -82,6 +84,11 @@ export default function StoryScenePage() {
         <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
       </main>
     )
+  }
+
+  // Render the reaction check-in screen (outside the scene layout)
+  if (step === 'reaction' && story) {
+    return <StoryReaction story={story} isGuest={isGuest} onContinue={() => setStep('cleared')} />
   }
 
   // Render the cleared screen (outside the scene layout)
@@ -120,11 +127,11 @@ export default function StoryScenePage() {
       return
     }
     // Last scene answered — decide what comes next.
-    // Progress is saved in the useEffect that watches step === 'cleared'.
+    // Progress is saved in the useEffect that watches step === 'reaction'.
     if (story.type === 'with_activity') {
       setStep(gatedActivity ? 'gate' : 'activity')
     } else {
-      setStep('cleared')
+      setStep('reaction')
     }
   }
 
@@ -165,7 +172,12 @@ export default function StoryScenePage() {
         <strong>{story.title}</strong>
       </div>
       <div className="story-scene-avatar">
-        <div className="ai-orb">●</div>
+        <img
+          src="/ai-for-all/Story-Ai-Mascot.png"
+          alt=""
+          aria-hidden="true"
+          style={{ width: 140, margin: '-22px 0 -24px', objectFit: 'contain', pointerEvents: 'none' }}
+        />
         {step === 'scene' && <span className="story-scene-dots">•••</span>}
       </div>
       {step === 'scene' && currentScene && (
@@ -195,7 +207,7 @@ export default function StoryScenePage() {
             <Link href="/sign-up" className="stories-cta" style={{ textAlign: 'center' }}>
               Sign Up
             </Link>
-            <button type="button" className="choice-button" onClick={() => setStep('cleared')}>
+            <button type="button" className="choice-button" onClick={() => setStep('reaction')}>
               Skip for now
             </button>
           </div>
@@ -225,7 +237,7 @@ export default function StoryScenePage() {
           <div className="story-scene-bubble">
             Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('cleared')}>
+          <button type="button" className="stories-cta" onClick={() => setStep('reaction')}>
             Finish
           </button>
         </>

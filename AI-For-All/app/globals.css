@@ -126,7 +126,7 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .terms-page { min-height:100dvh; background:var(--apc-pale); color:var(--apc-navy-deep); }
 .terms-page-header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:14px; padding:16px 20px; background:var(--apc-navy-deep); color:#fff; }
 .terms-page-header a { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.15); color:#fff; text-decoration:none; flex-shrink:0; }
-.terms-page-header h1 { font-size:16px; font-weight:800; }
+.terms-page-header h1 { flex:1; margin:0 52px 0 0; font-size:16px; font-weight:800; line-height:1.3; letter-spacing:normal; text-align:center; }
 .terms-page-body { max-width:720px; margin:0 auto; padding:28px 22px 60px; font-size:14px; line-height:1.65; }
 .terms-page-body h2 { font-size:19px; font-weight:800; margin:28px 0 10px; color:var(--apc-navy-deep); }
 .terms-page-body h2:first-child { margin-top:0; }
