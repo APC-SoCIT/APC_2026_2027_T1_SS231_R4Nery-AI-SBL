@@ -17,6 +17,8 @@ export function AuthMascotHeader({
         className={`authpage-mascot-img ${variant}-mascot`}
         src="/ai-for-all/Mascot-look-down.png"
         alt="AI for ALL mascot"
+        // Sit the mascot's paws right on the header/body dividing line
+        style={{ bottom: 0 }}
       />
     </div>
   )

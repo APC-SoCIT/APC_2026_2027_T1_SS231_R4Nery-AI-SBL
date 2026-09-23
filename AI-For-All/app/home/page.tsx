@@ -209,7 +209,8 @@ export default function HomePage() {
 
       <img
         className="home-mascot"
-        style={{ top: `calc(${currentTop}vh - 126px)` }}
+        // 0.81 = bottom of the visible mascot inside its square image, so it sits just above the sheet edge
+        style={{ top: `calc(${currentTop}vh - min(190px, 48vw) * 0.81)`, transition: dragTop === null ? 'top .28s cubic-bezier(.2,.8,.2,1)' : 'none' }}
         src="/ai-for-all/Story-Ai-Mascot.png"
         alt=""
         aria-hidden="true"

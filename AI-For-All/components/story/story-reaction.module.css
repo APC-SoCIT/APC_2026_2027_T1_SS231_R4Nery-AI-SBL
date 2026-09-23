@@ -1,0 +1,32 @@
+/* components/story/story-reaction.module.css
+   Story Reaction ("Check-in time") screen.
+   Scoped as a CSS module (same approach as app/admin/(cms)/stories/create)
+   so app/globals.css is untouched; colors come from the global design
+   tokens (--apc-*, --muted) defined in app/globals.css. */
+
+.page { position:relative; min-height:100dvh; display:flex; flex-direction:column; align-items:center; padding:56px 24px 40px; background:var(--apc-pale); color:var(--apc-navy-deep); text-align:center; }
+.heading { font-size:clamp(24px,6.5vw,28px); font-weight:800; line-height:1.2; letter-spacing:-.02em; margin:0 0 8px; color:var(--apc-navy-deep); }
+.subtitle { color:var(--muted); font-size:13px; margin:0 0 28px; }
+
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px 8px; width:100%; max-width:360px; margin:0 0 auto; }
+.option { display:flex; flex-direction:column; align-items:center; gap:6px; padding:0; background:transparent; color:var(--apc-navy-deep); }
+.option:disabled { cursor:default; }
+.face { display:grid; place-items:center; width:100%; max-width:74px; aspect-ratio:1; border:4px solid transparent; border-radius:50%; transition:border-color .15s, transform .15s; }
+.face svg { width:100%; height:100%; }
+.option:hover:not(:disabled) .face { transform:translateY(-2px); }
+.optionSelected .face { border-color:var(--apc-blue); }
+.label { font-size:12px; font-weight:700; line-height:1.2; color:#4a5580; }
+.optionSelected .label { color:var(--apc-blue); }
+
+.continue { display:flex; align-items:center; justify-content:center; width:100%; max-width:360px; min-height:56px; margin-top:32px; border-radius:16px; background:var(--apc-blue); color:#fff; font-size:17px; font-weight:800; box-shadow:0 4px 14px rgba(0,80,184,.28); transition:transform .18s ease, box-shadow .18s ease; }
+.continue:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,80,184,.38); }
+.continue:disabled { background:var(--apc-ready-disabled-bg); color:var(--apc-ready-disabled-text); box-shadow:none; cursor:not-allowed; }
+.another { margin-top:14px; padding:6px 10px; background:transparent; color:var(--muted); font-size:12px; text-decoration:underline; text-underline-offset:2px; }
+.another:disabled { opacity:.6; cursor:default; }
+
+/* Kiosk / tablet: larger touch targets */
+@media (min-width:768px) {
+  .grid, .continue { max-width:520px; }
+  .face { max-width:96px; }
+  .label { font-size:14px; }
+}
