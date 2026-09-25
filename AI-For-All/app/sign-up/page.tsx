@@ -30,22 +30,29 @@ const SUPABASE_CONFIGURED =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Letters and numbers only — no symbols/spaces.
+const PASSWORD_PATTERN = /^[A-Za-z0-9]+$/
+
 export default function SignUpPage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const passwordsMatch = confirmPassword === '' || password === confirmPassword
+  const passwordValid = password === '' || (password.length >= 8 && PASSWORD_PATTERN.test(password))
   const ready =
     name.trim().length > 0 &&
     email.trim().length > 0 &&
-    password.length > 0 &&
+    password.length >= 8 &&
+    PASSWORD_PATTERN.test(password) &&
     confirmPassword.length > 0 &&
-    password === confirmPassword
+    password === confirmPassword &&
+    agreedToTerms
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -57,7 +64,12 @@ export default function SignUpPage() {
       return
     }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!PASSWORD_PATTERN.test(password)) {
+      setError('Password can only contain letters and numbers — no symbols or spaces.')
+      return
+    }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return }
+    if (!agreedToTerms) { setError('Please agree to the Terms and Conditions to continue.'); return }
 
     setSubmitting(true)
     try {
@@ -86,7 +98,20 @@ export default function SignUpPage() {
       const { data: signUpData, error: sbError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
-        options: { data: { name: name.trim() } },
+        options: {
+          data: { name: name.trim() },
+          // Without this, Supabase falls back to whatever "Site URL" is
+          // set in the dashboard — which is why confirmation links were
+          // opening localhost even from the deployed site. This makes the
+          // link always point back at wherever the sign-up actually
+          // happened (localhost in dev, your real domain in prod).
+          //
+          // IMPORTANT: this only works if that exact URL is also added to
+          // Supabase Dashboard → Authentication → URL Configuration →
+          // Redirect URLs — Supabase rejects redirects that aren't on the
+          // allow list, regardless of what's passed here.
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
 
       if (sbError) {
@@ -162,13 +187,21 @@ export default function SignUpPage() {
         </label>
         <input
           id="signup-password"
-          className="authpage-field"
+          className={`authpage-field${!passwordValid ? ' authpage-field--error' : ''}`}
           type="password"
           placeholder="Password (8+ characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
         />
+        <p className="authpage-password-hint">
+          8+ characters, letters and numbers only (no symbols or spaces).
+        </p>
+        {!passwordValid && (
+          <p className="authpage-field-hint" role="alert">
+            Letters and numbers only — no symbols or spaces.
+          </p>
+        )}
 
         <label className="sr-only" htmlFor="signup-confirm-password">
           Confirm Password
@@ -200,6 +233,22 @@ export default function SignUpPage() {
           >
             <GoogleIcon /> Continue with Google
           </button>
+        </div>
+
+        <div className="authpage-terms">
+          <input
+            id="signup-terms"
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+          />
+          <label htmlFor="signup-terms">
+            I have read and agree to the{' '}
+            <Link href="/terms" target="_blank" rel="noreferrer">
+              Terms and Conditions and Privacy Notice
+            </Link>{' '}
+            of the AI for ALL – Story-Based Learning System.
+          </label>
         </div>
 
         <p className="authpage-links">
