@@ -54,6 +54,23 @@ export default function CreateStoryWizard() {
   const [skillsBuildButtonText, setSkillsBuildButtonText] = useState('Explore IBM Course')
   const [allowFreeText, setAllowFreeText] = useState(true)
   const [storyFor, setStoryFor] = useState<'all' | 'guests' | 'registered'>('all')
+  const [goalboardTopics, setGoalboardTopics] = useState<string[]>([])
+  const [gbCustomTopic, setGbCustomTopic] = useState('')
+
+  const TOPIC_COLORS_WIZARD: Record<string, string> = {
+    'AI Concepts':'#818cf8','Smart Helpers':'#38bdf8','Creative Thinking':'#fb923c',
+    'Fairness in Technology':'#4ade80','Rate Limiting':'#f87171','Prompt Engineering':'#fbbf24',
+    'Ethics in AI':'#a78bfa','Machine Learning':'#34d399','Data & Privacy':'#60a5fa','Robotics':'#f472b6',
+  }
+  const gbTopicColor = (t: string) => TOPIC_COLORS_WIZARD[t] ?? '#94a3b8'
+  const gbToggleTopic = (t: string) =>
+    setGoalboardTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  const gbAddCustom = () => {
+    const v = gbCustomTopic.trim()
+    if (!v) return
+    if (!goalboardTopics.includes(v)) setGoalboardTopics(prev => [...prev, v])
+    setGbCustomTopic('')
+  }
 
   // Trigger AI Story Generation
   const handleGenerateStory = async () => {
@@ -116,10 +133,12 @@ export default function CreateStoryWizard() {
     if (!generatedStory) return
     setSaving(true)
 
+    const effectiveTopics = goalboardTopics.length ? goalboardTopics : [concept || generatedStory.category || 'Uncategorised']
+
     const finalStory: StoryModule = {
       ...generatedStory,
       title: title || generatedStory.title,
-      category: concept || generatedStory.category,
+      category: effectiveTopics[0],
       level,
       type: storyType,
       status,
@@ -132,6 +151,18 @@ export default function CreateStoryWizard() {
     }
 
     await saveStoryToDb(finalStory)
+
+    // Register on the goalboard with all chosen topics (multi-topic support)
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ai_for_all_goalboard')
+        const board = saved ? JSON.parse(saved) : { boardIds: [], topicOverrides: {} }
+        if (!board.boardIds.includes(finalStory.id)) board.boardIds.push(finalStory.id)
+        board.topicOverrides[finalStory.id] = effectiveTopics
+        localStorage.setItem('ai_for_all_goalboard', JSON.stringify(board))
+      } catch { /* noop */ }
+    }
+
     setSaving(false)
     router.push('/admin/stories')
   }
@@ -390,7 +421,7 @@ export default function CreateStoryWizard() {
 
                   <div className={styles.choiceGrid}>
                     <div className={styles.choiceBox}>
-                      <h5>Choice A (+1 Intellect)</h5>
+                      <h5>Choice A</h5>
                       <textarea
                         className={styles.textArea}
                         style={{ minHeight: '80px' }}
@@ -400,7 +431,7 @@ export default function CreateStoryWizard() {
                       />
                     </div>
                     <div className={styles.choiceBox}>
-                      <h5>Choice B (-1 Creative)</h5>
+                      <h5>Choice B</h5>
                       <textarea
                         className={styles.textArea}
                         style={{ minHeight: '80px' }}
@@ -471,6 +502,52 @@ export default function CreateStoryWizard() {
                     {storyType === 'with_activity' ? 'With End Activity' : 'Tap Choices Only'}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Goalboard Topics — multi-select chip picker */}
+            <div className={styles.inputGroup} style={{ marginBottom: '24px' }}>
+              <label className={styles.inputLabel}>📌 Goalboard Topics</label>
+              <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64647b' }}>
+                Choose one or more topic groups for this quest on the Goal Board.
+                Leave blank to use the AI&nbsp;Concept field. A quest can appear under multiple topics.
+              </p>
+              {/* Selected chips */}
+              {goalboardTopics.length > 0 && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+                  {goalboardTopics.map(t => (
+                    <span key={t} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 8px 4px 10px', borderRadius:20, fontSize:11, fontWeight:700, border:`1.5px solid ${gbTopicColor(t)}`, background:`color-mix(in srgb,${gbTopicColor(t)} 18%,white)`, color:'var(--ink)' }}>
+                      <span style={{ width:7, height:7, borderRadius:'50%', background:gbTopicColor(t), flexShrink:0, display:'inline-block' }} />
+                      {t}
+                      <button onClick={() => gbToggleTopic(t)} style={{ display:'grid', placeItems:'center', width:14, height:14, borderRadius:'50%', background:'rgba(0,0,0,.12)', border:'none', cursor:'pointer', padding:0 }}>×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Preset chips */}
+              <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:10 }}>
+                {Object.keys(TOPIC_COLORS_WIZARD).map(t => (
+                  <button key={t} type="button"
+                    onClick={() => gbToggleTopic(t)}
+                    style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 11px', borderRadius:20, border: goalboardTopics.includes(t) ? `1.5px solid ${gbTopicColor(t)}` : '1.5px solid var(--line)', background: goalboardTopics.includes(t) ? `color-mix(in srgb,${gbTopicColor(t)} 15%,white)` : 'transparent', fontSize:12, fontWeight:600, cursor:'pointer', transition:'all .15s', color:'var(--ink)' }}>
+                    <span style={{ width:7, height:7, borderRadius:'50%', background:gbTopicColor(t), flexShrink:0, display:'inline-block' }} />
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {/* Custom topic input */}
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  className={styles.textInput}
+                  value={gbCustomTopic}
+                  onChange={e => setGbCustomTopic(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && gbAddCustom()}
+                  placeholder="+ Type a custom topic and press Enter"
+                  style={{ flex:1 }}
+                />
+                {gbCustomTopic.trim() && (
+                  <button type="button" className={styles.selectInput} style={{ width:'auto', padding:'0 14px', cursor:'pointer', background:'var(--ink)', color:'var(--white)', border:'none', borderRadius:8, fontSize:12, fontWeight:700 }} onClick={gbAddCustom}>Add</button>
+                )}
               </div>
             </div>
 
