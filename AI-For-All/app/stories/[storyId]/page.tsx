@@ -12,6 +12,8 @@ import { StoryReaction } from '@/components/story/story-reaction'
 
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
 
+const PROGRESS_KEY_PREFIX = 'ai-for-all:story-progress:'
+
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
   const router = useRouter()
@@ -29,6 +31,25 @@ export default function StoryScenePage() {
       const found = await fetchStoryById(params.storyId)
       if (cancelled) return
       setStory(found)
+      if (found) {
+        // Resume in-progress reading instead of restarting on reload.
+        const saved = typeof window !== 'undefined'
+          ? sessionStorage.getItem(PROGRESS_KEY_PREFIX + params.storyId)
+          : null
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved)
+            if (parsed && typeof parsed.sceneIndex === 'number') {
+              setSceneIndex(parsed.sceneIndex)
+              setScore(parsed.score ?? 0)
+              setPromptText(parsed.promptText ?? '')
+              setStep(parsed.step ?? 'scene')
+            }
+          } catch {
+            // Ignore malformed saved progress
+          }
+        }
+      }
       setLoading(false)
       if (!found) setStep('not-found')
     })()
@@ -36,6 +57,18 @@ export default function StoryScenePage() {
       cancelled = true
     }
   }, [params.storyId])
+
+  // Persist in-progress state so a reload resumes instead of restarting.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !story) return
+    const key = PROGRESS_KEY_PREFIX + story.id
+    if (step === 'scene' || step === 'gate' || step === 'activity' || step === 'response') {
+      sessionStorage.setItem(key, JSON.stringify({ step, sceneIndex, score, promptText }))
+    } else if (step === 'reaction' || step === 'cleared') {
+      // Story finished — clear saved progress so a future visit starts fresh.
+      sessionStorage.removeItem(key)
+    }
+  }, [story, step, sceneIndex, score, promptText])
 
   // Track presence while the learner is on this story page
   useEffect(() => {
