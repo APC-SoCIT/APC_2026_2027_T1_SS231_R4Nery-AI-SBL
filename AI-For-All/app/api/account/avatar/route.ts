@@ -101,7 +101,10 @@ export async function POST(request: NextRequest) {
 
   // Get public URL
   const { data: urlData } = admin.storage.from('avatars').getPublicUrl(filePath)
-  const avatarUrl = urlData.publicUrl
+  // Cache-bust: re-uploads reuse the same {userId}.{ext} path (upsert), so
+  // without a changing query string the browser/CDN keeps showing the old
+  // cached image after a re-upload.
+  const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`
 
   // Persist to users table (using user-scoped client respects RLS)
   const { error: updateErr } = await supabase
