@@ -54,6 +54,8 @@ export default function CreateStoryWizard() {
   const [skillsBuildButtonText, setSkillsBuildButtonText] = useState('Explore IBM Course')
   const [allowFreeText, setAllowFreeText] = useState(true)
   const [storyFor, setStoryFor] = useState<'all' | 'guests' | 'registered'>('all')
+  const [goalboardTopic, setGoalboardTopic] = useState('')
+  const [customGoalboardTopic, setCustomGoalboardTopic] = useState('')
 
   // Trigger AI Story Generation
   const handleGenerateStory = async () => {
@@ -116,10 +118,12 @@ export default function CreateStoryWizard() {
     if (!generatedStory) return
     setSaving(true)
 
+    const effectiveTopic = (goalboardTopic === '__custom__' ? customGoalboardTopic.trim() : goalboardTopic) || concept || generatedStory.category
+
     const finalStory: StoryModule = {
       ...generatedStory,
       title: title || generatedStory.title,
-      category: concept || generatedStory.category,
+      category: effectiveTopic,
       level,
       type: storyType,
       status,
@@ -132,6 +136,18 @@ export default function CreateStoryWizard() {
     }
 
     await saveStoryToDb(finalStory)
+
+    // Also register this story on the goalboard with the chosen topic
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ai_for_all_goalboard')
+        const board = saved ? JSON.parse(saved) : { boardIds: [], topicOverrides: {} }
+        if (!board.boardIds.includes(finalStory.id)) board.boardIds.push(finalStory.id)
+        board.topicOverrides[finalStory.id] = effectiveTopic
+        localStorage.setItem('ai_for_all_goalboard', JSON.stringify(board))
+      } catch { /* noop */ }
+    }
+
     setSaving(false)
     router.push('/admin/stories')
   }
@@ -472,6 +488,43 @@ export default function CreateStoryWizard() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Goalboard Topic */}
+            <div className={styles.inputGroup} style={{ marginBottom: '24px' }}>
+              <label className={styles.inputLabel}>📌 Goalboard Topic</label>
+              <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64647b' }}>
+                Choose which topic group this quest appears under on the Admin Goal Board.
+                Leave blank to use the AI Concept field as the topic.
+              </p>
+              <select
+                className={styles.selectInput}
+                value={goalboardTopic}
+                onChange={e => setGoalboardTopic(e.target.value)}
+              >
+                <option value="">— Use AI Concept as topic —</option>
+                <option value="AI Concepts">AI Concepts</option>
+                <option value="Smart Helpers">Smart Helpers</option>
+                <option value="Creative Thinking">Creative Thinking</option>
+                <option value="Fairness in Technology">Fairness in Technology</option>
+                <option value="Rate Limiting">Rate Limiting</option>
+                <option value="Prompt Engineering">Prompt Engineering</option>
+                <option value="Ethics in AI">Ethics in AI</option>
+                <option value="Machine Learning">Machine Learning</option>
+                <option value="Data & Privacy">Data &amp; Privacy</option>
+                <option value="Robotics">Robotics</option>
+                <option value="__custom__">+ Create a new topic…</option>
+              </select>
+              {goalboardTopic === '__custom__' && (
+                <input
+                  className={styles.textInput}
+                  style={{ marginTop: '8px' }}
+                  value={customGoalboardTopic}
+                  onChange={e => setCustomGoalboardTopic(e.target.value)}
+                  placeholder="e.g. Natural Language Processing"
+                  autoFocus
+                />
+              )}
             </div>
 
             <div className={styles.settingsGrid}>
