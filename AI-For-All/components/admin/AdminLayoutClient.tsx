@@ -11,7 +11,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabase = createClient()
 
-  if (pathname === '/admin' || pathname === '/admin/login') {
+  if (pathname === '/admin') {
     return <>{children}</>
   }
 
