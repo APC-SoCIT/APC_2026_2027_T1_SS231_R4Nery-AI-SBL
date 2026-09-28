@@ -1,11 +1,13 @@
 /**
- * app/auth/callback/route.ts  — Google OAuth code exchange
+ * app/auth/callback/route.ts  — Google OAuth code exchange + email link verification
  *
- * After Google redirects to Supabase and Supabase redirects back to our app
- * at /auth/callback?code=..., this Route Handler:
- *   1. Exchanges the code for a session (server-side, secure)
- *   2. Redirects the browser to /home on success
- *   3. Redirects to /sign-in?error=auth on failure
+ * Handles two kinds of incoming links:
+ *   1. OAuth (?code=...)                — exchanged via exchangeCodeForSession
+ *   2. Email confirm / magic link       — verified via verifyOtp({ token_hash, type })
+ *      (?token_hash=...&type=...)       — requires the Supabase email templates to
+ *                                          send token_hash/type instead of the legacy
+ *                                          {{ .ConfirmationURL }}. See Auth → Email
+ *                                          Templates in the Supabase Dashboard.
  *
  * The redirect URL configured in:
  *   • Google Cloud Console → OAuth Credentials → Authorised redirect URIs
@@ -14,19 +16,29 @@
  */
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const token_hash = searchParams.get('token_hash')
+  const type = searchParams.get('type') as EmailOtpType | null
   // `next` can be set to a deep-link that should be visited after sign-in
   const next = searchParams.get('next') ?? '/home'
 
+  const supabase = await createClient()
+
   if (code) {
-    const supabase = await createClient()
+    // Google OAuth (and any other PKCE `code`-based flow)
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // Successful OAuth — send the user to the intended destination
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+  } else if (token_hash && type) {
+    // Email confirmation / magic link, PKCE `token_hash` flow
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type })
+    if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
