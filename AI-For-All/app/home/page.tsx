@@ -71,7 +71,7 @@ export default function HomePage() {
 
   // ── Redirect if not authenticated ─────────────────────────────────────────
   useEffect(() => {
-    if (!sessionLoading && !session) {
+    if (!sessionLoading && (!session || session.isGuest)) {
       router.replace('/sign-in')
     }
   }, [session, sessionLoading, router])
@@ -139,7 +139,7 @@ export default function HomePage() {
   }, [session])
 
   // ── Show nothing while session is initialising ─────────────────────────────
-  if (sessionLoading || !session) return null
+  if (sessionLoading || !session || session.isGuest) return null
 
   // ── Derive stats from real data ────────────────────────────────────────────
   const completedIds: string[] = progress?.completedModules ?? []
@@ -162,6 +162,8 @@ export default function HomePage() {
   ]
 
   const currentTop = dragTop ?? SNAP_TOP[snap]
+  // "AI for All" title + subtitle scale together with the sheet's parallax position (1x at the default snap), clamped to 0.85x - 1.25x
+  const heroTitleScale = Math.min(1.25, Math.max(0.85, 1 + (currentTop - SNAP_TOP.default) * 0.01))
 
   function toVh(px: number) {
     return (px / window.innerHeight) * 100
@@ -202,16 +204,19 @@ export default function HomePage() {
 
   return (
     <main className="home-page">
-      <div className="home-hero">
+      <div
+        className="home-hero"
+        style={{ transform: `scale(${heroTitleScale})`, transformOrigin: 'center bottom', transition: dragTop === null ? 'transform .28s cubic-bezier(.2,.8,.2,1)' : 'none' }}
+      >
         <p className="home-hero-title">AI for All</p>
         <p className="home-hero-subtitle">Explore through stories</p>
       </div>
 
       <img
         className="home-mascot"
-        // 0.81 = bottom of the visible mascot inside its square image, so it sits just above the sheet edge
-        style={{ top: `calc(${currentTop}vh - min(190px, 48vw) * 0.81)`, transition: dragTop === null ? 'top .28s cubic-bezier(.2,.8,.2,1)' : 'none' }}
-        src="/ai-for-all/Story-Ai-Mascot.png"
+        // Sits in front of the sheet with its paws resting on the sheet's top edge (bottom 12% of the image overlaps the card)
+        style={{ top: `${currentTop}vh`, transform: 'translate(-50%, -88%)', zIndex: 3, transition: dragTop === null ? 'top .28s cubic-bezier(.2,.8,.2,1)' : 'none' }}
+        src="/Home-Page-Mascot.png"
         alt=""
         aria-hidden="true"
       />
