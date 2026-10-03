@@ -40,7 +40,7 @@ export default function ArchivePage() {
 
   // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!sessionLoading && !session) router.replace('/sign-in')
+    if (!sessionLoading && (!session || session.isGuest)) router.replace('/sign-in')
   }, [session, sessionLoading, router])
 
   // ── Load completed stories ─────────────────────────────────────────────────
@@ -50,13 +50,12 @@ export default function ArchivePage() {
       setLoading(true)
       try {
         const supabase = createClient()
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('completed_modules, updated_at')
-          .eq('user_id', session!.userId)
-          .maybeSingle()
+        // Same source of truth as Home: /api/progress (progress + mall_goers tables)
+        const res = await fetch('/api/progress')
+        if (!res.ok) throw new Error(`Failed to load progress (${res.status})`)
+        const progressData: { completedModules?: string[]; completedDates?: Record<string, string> } = await res.json()
 
-        const completedIds: string[] = progressData?.completed_modules ?? []
+        const completedIds: string[] = progressData?.completedModules ?? []
         if (completedIds.length === 0) {
           setStories([])
           setLoading(false)
@@ -78,12 +77,13 @@ export default function ArchivePage() {
               color: s.color ?? '#8dcdf4',
               category: s.category ?? '',
               level: s.level ?? '',
-              completedAt: progressData?.updated_at ?? null,
+              completedAt: progressData?.completedDates?.[s.id] ?? null,
             }))
           setStories(ordered)
         }
-      } catch {
+      } catch (err) {
         // Non-fatal
+        console.error('Archive: could not load completed stories', err)
       } finally {
         setLoading(false)
       }
@@ -91,7 +91,7 @@ export default function ArchivePage() {
     load()
   }, [session])
 
-  if (sessionLoading || !session) return null
+  if (sessionLoading || !session || session.isGuest) return null
 
   const filtered = stories.filter((s) => {
     const matchSearch = s.title.toLowerCase().includes(search.toLowerCase())
@@ -178,7 +178,6 @@ export default function ArchivePage() {
               const bg = story.color
               const tc = textColorFor(bg)
               const isExpanded = expandedId === story.id
-              const isLast = i === filtered.length - 1
 
               return (
                 <div
@@ -187,7 +186,8 @@ export default function ArchivePage() {
                   style={{
                     '--card-bg': bg,
                     '--card-tc': tc,
-                    zIndex: filtered.length + 1 - i,
+                    // Later cards sit on top of earlier ones so each bookmark's notched top overlaps the card above
+                    zIndex: i + 1,
                   } as React.CSSProperties}
                   onClick={() => setExpandedId(isExpanded ? null : story.id)}
                   role="button"
@@ -242,21 +242,6 @@ export default function ArchivePage() {
                         </Link>
                       </div>
                     </div>
-                  )}
-
-                  {/* Wave divider — every card except the last gets a wavy overlap */}
-                  {!isLast && (
-                    <svg
-                      className="archive-card-wave"
-                      viewBox="0 0 390 40"
-                      preserveAspectRatio="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M0,0 C50,40 100,0 150,20 C200,40 250,0 300,20 C330,34 360,12 390,20 L390,40 L0,40 Z"
-                        fill={filtered[i + 1]?.color}
-                      />
-                    </svg>
                   )}
                 </div>
               )

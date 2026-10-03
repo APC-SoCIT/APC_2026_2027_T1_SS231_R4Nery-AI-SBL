@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Accessibility } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { clearMockSession } from '@/lib/mock-auth'
 
 export default function GetStartedPage() {
   const router = useRouter()
@@ -24,6 +25,13 @@ export default function GetStartedPage() {
   async function handleGuest() {
     setGuestLoading(true)
     try {
+      // Guest mode must never inherit the previous visitor's identity: drop any
+      // leftover mock login and in-progress story state from this tab.
+      clearMockSession()
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith('ai-for-all:story-progress:'))
+        .forEach((key) => sessionStorage.removeItem(key))
+
       // Supabase not yet configured — dev fallback
       if (
         !process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -34,6 +42,12 @@ export default function GetStartedPage() {
       }
 
       const supabase = createClient()
+      // End any registered session left on this browser BEFORE starting guest
+      // mode. Otherwise, if signInAnonymously() fails (anonymous sign-ins
+      // disabled or rate-limited), the previous user's session stays active and
+      // the "guest" is treated as that user (Back -> their /home, their progress).
+      // scope: 'local' only clears this browser, not the user's other devices.
+      await supabase.auth.signOut({ scope: 'local' })
       const { error } = await supabase.auth.signInAnonymously()
 
       if (error) {
