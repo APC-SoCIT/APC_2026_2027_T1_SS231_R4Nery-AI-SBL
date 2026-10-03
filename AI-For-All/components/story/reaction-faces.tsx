@@ -7,7 +7,7 @@
  * exports the illustrated PNGs, drop them in public/ai-for-all/reactions/
  * and swap the <svg> for an <img> here; nothing else needs to change.
  */
-import type { StoryReactionValue } from '@/lib/reactions'
+import type { StoryReactionValue } from '@/lib/reactions.ts'
 
 const INK = '#1d1d35'
 
