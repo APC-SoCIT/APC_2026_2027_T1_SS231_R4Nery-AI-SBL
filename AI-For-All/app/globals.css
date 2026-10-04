@@ -532,7 +532,8 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .prof-sub-save.is-ready { background:var(--apc-navy-deep); }
 .prof-sub-save:disabled { cursor:not-allowed; }
 .prof-settings-section { margin-bottom:14px; padding:20px; border-radius:20px; background:#fff; box-shadow:var(--shadow); }
-.prof-settings-heading { margin:0 0 12px; font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--apc-google); }
+.prof-settings-heading { margin:0 0 12px; font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.prof-settings-section.danger .prof-settings-heading { color:var(--apc-google); }
 .prof-delete-btn { width:100%; min-height:48px; border-radius:14px; background:#ffe9e7; color:#c0392b; font-weight:750; }
 .prof-confirm-box { display:grid; gap:12px; }
 .prof-confirm-text { margin:0; font-size:14px; color:var(--ink); }
@@ -540,6 +541,10 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .prof-confirm-yes, .prof-confirm-cancel { flex:1; min-height:46px; border-radius:12px; font-weight:750; }
 .prof-confirm-yes { background:var(--apc-google); color:#fff; }
 .prof-confirm-cancel { background:var(--apc-pale); color:var(--apc-navy-deep); }
+/* Change password feedback */
+.prof-pw-success { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; background:#eef8d5; color:#3a6b0e; font-size:13px; font-weight:700; margin-bottom:10px; }
+.prof-pw-errors { margin:0 0 10px; padding:10px 14px 10px 28px; border-radius:12px; background:#fff0ee; color:#c0392b; font-size:13px; font-weight:600; }
+.prof-pw-errors li { margin-bottom:2px; }
 @media (min-width:900px) { .prof-hero, .prof-sub-hero { padding:24px 40px 72px; }.prof-hero-back, .prof-sub-back { left:0; }.prof-hero-bar, .prof-sub-hero-bar { max-width:1100px; margin:0 auto; } }
 
 .authpage-password-hint { margin:-8px 0 12px; font-size:11px; line-height:1.4; opacity:.9; }
