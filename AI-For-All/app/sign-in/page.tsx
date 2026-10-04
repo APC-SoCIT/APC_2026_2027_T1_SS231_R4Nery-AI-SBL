@@ -19,10 +19,12 @@ const SUPABASE_ERRORS: Record<string, string> = {
   invalid_credentials: 'Incorrect email or password.',
   email_not_confirmed: 'Please verify your email first.',
   over_request_rate_limit: 'Too many attempts. Please wait a moment before trying again.',
+  user_banned: 'For account activation please email the admin at placeholder@gmail.com',
 }
 
 function mapError(code: string | undefined, message: string): string {
   if (code && SUPABASE_ERRORS[code]) return SUPABASE_ERRORS[code]
+  if (message.toLowerCase().includes('banned')) return SUPABASE_ERRORS['user_banned']
   return message
 }
 

@@ -10,12 +10,13 @@
  *
  * Matches the app's APC blue design system; uses the same bottom nav as Home.
  */
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
-  ArrowLeft, Camera, Check, ChevronRight,
-  LogOut, Settings, UserRound, Lock, PowerOff,
+  ArrowLeft, Check, ChevronRight,
+  LogOut, Settings, UserRound, Lock, PowerOff, Eye, EyeOff,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
@@ -67,8 +68,7 @@ export default function ProfileHubPage() {
   // Profile Details state
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const [localAvatar, setLocalAvatar] = useState<string | null>(null)
+  const [selectedAvatar, setSelectedAvatar] = useState<number | null>(null)
 
   // Settings — Deactivation state
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
@@ -82,8 +82,19 @@ export default function ProfileHubPage() {
   const [changingPw, setChangingPw] = useState(false)
   const [pwSuccess, setPwSuccess] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const detailsFileInputRef = useRef<HTMLInputElement>(null)
+  // Password visibility toggles
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
+
+  // Preset avatar options
+  const AVATAR_OPTIONS = [
+    '/ai-for-all/avatars/avatar-1.png',
+    '/ai-for-all/avatars/avatar-2.png',
+    '/ai-for-all/avatars/avatar-3.png',
+    '/ai-for-all/avatars/avatar-4.png',
+    '/ai-for-all/avatars/avatar-5.png',
+  ]
 
   // ── Load profile + progress ─────────────────────────────────────────────────
   useEffect(() => {
@@ -105,14 +116,18 @@ export default function ProfileHubPage() {
 
         const avatarData = avatarRes.ok ? await avatarRes.json() : {}
 
+        // Detect which preset avatar index is stored (if any)
+        const storedUrl: string | null = avatarData.avatarUrl ?? null
+        const presetIndex = AVATAR_OPTIONS.findIndex(a => a === storedUrl)
+
         setProfile({
           id: profileData.id,
           name: profileData.name,
           email: profileData.email,
           role: profileData.role,
-          avatarUrl: avatarData.avatarUrl ?? null,
+          avatarUrl: storedUrl,
         })
-        setLocalAvatar(avatarData.avatarUrl ?? null)
+        setSelectedAvatar(presetIndex >= 0 ? presetIndex : null)
         setName(profileData.name ?? '')
 
         if (progressRes.ok) {
@@ -126,33 +141,27 @@ export default function ProfileHubPage() {
       }
     }
     load()
-  }, [router])
+  }, [router]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Upload avatar ────────────────────────────────────────────────────────────
-  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const objectUrl = URL.createObjectURL(file)
-    setLocalAvatar(objectUrl)
-    setAvatarUploading(true)
-
+  // ── Select preset avatar ─────────────────────────────────────────────────────
+  async function handleAvatarSelect(index: number) {
+    setSelectedAvatar(index)
+    const avatarUrl = AVATAR_OPTIONS[index]
     try {
+      // Persist the selected preset URL via the avatar API
       const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/account/avatar', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Upload failed.')
-      setLocalAvatar(data.avatarUrl)
-      setProfile(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev)
-      toast.success('Profile photo updated!')
-    } catch (err: any) {
-      setLocalAvatar(profile?.avatarUrl ?? null)
-      toast.error(err.message ?? 'Upload failed.')
-    } finally {
-      setAvatarUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      if (detailsFileInputRef.current) detailsFileInputRef.current.value = ''
+      // Encode the preset URL as a special field so the API can store it
+      const res = await fetch('/api/account/avatar', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl }),
+      })
+      const data = res.ok ? await res.json() : null
+      const saved = data?.avatarUrl ?? avatarUrl
+      setProfile(prev => prev ? { ...prev, avatarUrl: saved } : prev)
+      toast.success('Avatar updated!')
+    } catch {
+      // Non-fatal: the selection is shown locally either way
     }
   }
 
@@ -276,10 +285,11 @@ export default function ProfileHubPage() {
   // ── Avatar render helper ────────────────────────────────────────────────────
   function AvatarImage({ size }: { size: 'large' | 'medium' }) {
     const cls = size === 'large' ? 'prof-avatar' : 'prof-details-avatar'
+    const avatarSrc = selectedAvatar !== null ? AVATAR_OPTIONS[selectedAvatar] : (profile?.avatarUrl ?? null)
     return (
       <div className={cls} aria-label="Profile avatar">
-        {localAvatar
-          ? <img src={localAvatar} alt={profile?.name ?? 'Avatar'} />
+        {avatarSrc
+          ? <Image src={avatarSrc} alt={profile?.name ?? 'Avatar'} width={80} height={80} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
           : <span>{initials}</span>
         }
       </div>
@@ -310,24 +320,28 @@ export default function ProfileHubPage() {
 
           {/* Body */}
           <div className="prof-sub-body">
-            {/* Avatar edit */}
+            {/* Avatar selection */}
             <div className="prof-details-avatar-wrap">
               <AvatarImage size="medium" />
-              <label
-                id="details-change-photo-btn"
-                className={`prof-details-avatar-btn${avatarUploading ? ' prof-uploading' : ''}`}
-                aria-label="Change profile photo"
-              >
-                <Camera size={14} />
-                {avatarUploading ? 'Uploading…' : 'Change Photo'}
-                <input
-                  ref={detailsFileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleAvatarChange}
-                  aria-hidden="true"
-                />
-              </label>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', margin: '8px 0 4px', fontWeight: 600 }}>Choose your avatar</p>
+            <div className="prof-avatar-picker" role="radiogroup" aria-label="Avatar selection">
+              {AVATAR_OPTIONS.map((src, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  id={`details-avatar-option-${i + 1}`}
+                  className={`prof-avatar-option${selectedAvatar === i ? ' selected' : ''}`}
+                  onClick={() => handleAvatarSelect(i)}
+                  aria-label={`Avatar option ${i + 1}`}
+                  aria-pressed={selectedAvatar === i}
+                >
+                  <Image src={src} alt={`Avatar ${i + 1}`} width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {selectedAvatar === i && (
+                    <span className="prof-avatar-option-check" aria-hidden="true"><Check size={12} /></span>
+                  )}
+                </button>
+              ))}
             </div>
 
             {/* Name form */}
@@ -434,46 +448,76 @@ export default function ProfileHubPage() {
               <form onSubmit={handleChangePassword} className="prof-sub-form" style={{ marginTop: 8 }} autoComplete="off">
                 <label className="prof-sub-label">
                   <span className="prof-sub-label-text">Current Password</span>
-                  <input
-                    id="settings-current-password"
-                    className="prof-sub-input"
-                    type="password"
-                    value={currentPassword}
-                    onChange={e => setCurrentPassword(e.target.value)}
-                    placeholder="Enter your current password"
-                    autoComplete="current-password"
-                    required
-                  />
+                  <div className="prof-pw-field-wrap">
+                    <input
+                      id="settings-current-password"
+                      className="prof-sub-input"
+                      type={showCurrentPw ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="prof-pw-eye"
+                      onClick={() => setShowCurrentPw(v => !v)}
+                      aria-label={showCurrentPw ? 'Hide password' : 'Show password'}
+                    >
+                      {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </label>
 
                 <label className="prof-sub-label">
                   <span className="prof-sub-label-text">New Password</span>
-                  <input
-                    id="settings-new-password"
-                    className="prof-sub-input"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
+                  <div className="prof-pw-field-wrap">
+                    <input
+                      id="settings-new-password"
+                      className="prof-sub-input"
+                      type={showNewPw ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => { setNewPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
+                      placeholder="At least 8 characters"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="prof-pw-eye"
+                      onClick={() => setShowNewPw(v => !v)}
+                      aria-label={showNewPw ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </label>
 
                 <label className="prof-sub-label">
                   <span className="prof-sub-label-text">Confirm New Password</span>
-                  <input
-                    id="settings-confirm-password"
-                    className="prof-sub-input"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
-                    placeholder="Repeat new password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
+                  <div className="prof-pw-field-wrap">
+                    <input
+                      id="settings-confirm-password"
+                      className="prof-sub-input"
+                      type={showConfirmPw ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => { setConfirmPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
+                      placeholder="Repeat new password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="prof-pw-eye"
+                      onClick={() => setShowConfirmPw(v => !v)}
+                      aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </label>
 
                 <button
@@ -581,24 +625,9 @@ export default function ProfileHubPage() {
           <span className="prof-hero-title">Profile</span>
         </div>
 
-        {/* Avatar with camera button */}
+        {/* Avatar */}
         <div className="prof-avatar-wrap">
           <AvatarImage size="large" />
-          {/* Camera overlay — quick upload from main view */}
-          <label
-            id="profile-avatar-upload-btn"
-            className={`prof-avatar-cam${avatarUploading ? ' prof-uploading' : ''}`}
-            aria-label="Change profile photo"
-          >
-            <Camera size={13} />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={handleAvatarChange}
-              aria-hidden="true"
-            />
-          </label>
         </div>
 
         {/* Name & role */}
