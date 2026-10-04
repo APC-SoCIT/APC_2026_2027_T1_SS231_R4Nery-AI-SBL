@@ -568,7 +568,7 @@ export default function ProfileHubPage() {
                 <button
                   id="settings-deactivate-btn"
                   className="prof-delete-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   onClick={() => setConfirmDeactivate(true)}
                 >
                   <PowerOff size={16} style={{ flexShrink: 0 }} />
