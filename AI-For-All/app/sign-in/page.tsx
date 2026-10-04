@@ -19,7 +19,7 @@ const SUPABASE_ERRORS: Record<string, string> = {
   invalid_credentials: 'Incorrect email or password.',
   email_not_confirmed: 'Please verify your email first.',
   over_request_rate_limit: 'Too many attempts. Please wait a moment before trying again.',
-  user_banned: 'For account activation please email the admin at placeholder@gmail.com',
+  user_banned: 'For account activation please email the admin at admin@aiforall.com',
 }
 
 function mapError(code: string | undefined, message: string): string {
