@@ -7,10 +7,12 @@
  * app/stories/[storyId]/page.tsx as the 'reaction' step, right after the
  * learner finishes the last story step and before the Story Cleared screen.
  *
- * Registered learners: the selected reaction is saved through
- * POST /api/reactions (one row per user + story; reacting again updates it).
- * Guests: nothing is saved, matching how story progress is handled for
- * guests; they simply continue to the Story Cleared screen.
+ * Every reaction is sent to POST /api/reactions, so the totals include guests:
+ *   - Registered learners: saved as their own row (one per user + story;
+ *     reacting again updates it), so facilitators can see who reacted.
+ *   - Guests: only added to an anonymous per-story tally. The browser remembers
+ *     the guest's last pick (see GUEST_REACTION_KEY) so changing it moves the
+ *     count instead of adding a second one.
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -29,6 +31,26 @@ interface StoryReactionProps {
 
 type Destination = 'continue' | 'stories'
 
+const GUEST_REACTION_KEY = 'ai-for-all:guest-reaction:'
+
+/** The reaction this browser last sent for a story as a guest (nothing is stored server-side). */
+function readGuestReaction(storyId: string): StoryReactionValue | null {
+  try {
+    const value = localStorage.getItem(GUEST_REACTION_KEY + storyId)
+    return isStoryReactionValue(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+function writeGuestReaction(storyId: string, value: StoryReactionValue) {
+  try {
+    localStorage.setItem(GUEST_REACTION_KEY + storyId, value)
+  } catch {
+    // localStorage unavailable: a later change would count as a new reaction
+  }
+}
+
 export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps) {
   const router = useRouter()
   const [selected, setSelected] = useState<StoryReactionValue | null>(null)
@@ -36,7 +58,11 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
 
   // Pre-select the learner's previous reaction to this story, if any.
   useEffect(() => {
-    if (isGuest) return
+    if (isGuest) {
+      const previous = readGuestReaction(story.id)
+      if (previous) setSelected((current) => current ?? previous)
+      return
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -55,33 +81,47 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
     }
   }, [isGuest, story.id])
 
-  /** Returns true when the reaction was saved (or there was nothing to save). */
-  async function saveReaction(): Promise<boolean> {
-    if (!selected || isGuest) return true
+  /**
+   * 'saved': stored. 'skipped': not stored, but the learner may continue
+   * (nothing selected, or the guest rate limit was hit). 'failed': let them retry.
+   */
+  async function saveReaction(): Promise<'saved' | 'skipped' | 'failed'> {
+    if (!selected) return 'skipped'
     try {
+      // Guests send their previous pick so the server moves the count instead of adding one
+      const previousReaction = isGuest ? readGuestReaction(story.id) : null
       const res = await fetch('/api/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId: story.id, reaction: selected }),
+        body: JSON.stringify({ storyId: story.id, reaction: selected, previousReaction }),
       })
-      if (res.ok) return true
+      if (res.ok) {
+        if (isGuest) writeGuestReaction(story.id, selected)
+        return 'saved'
+      }
+      if (res.status === 429) {
+        // Guest rate limit: never trap a real learner on this screen
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error ?? 'Your reaction wasn’t saved, but you can keep going.')
+        return 'skipped'
+      }
       if (res.status === 401) {
         toast.error('Your session has expired. Please sign in again to save your reaction.')
       } else {
         const data = await res.json().catch(() => ({}))
         toast.error(data.error ?? 'We couldn’t save your reaction. Please try again.')
       }
-      return false
+      return 'failed'
     } catch {
       toast.error('We couldn’t save your reaction. Please check your connection and try again.')
-      return false
+      return 'failed'
     }
   }
 
   async function handleSubmit(destination: Destination) {
     if (submitting) return // prevent double submits
     setSubmitting(true)
-    const saved = await saveReaction()
+    const result = await saveReaction()
 
     if (destination === 'stories') {
       // Secondary exit: never trap the learner here, even if saving failed.
@@ -89,11 +129,11 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
       return
     }
 
-    if (!saved) {
+    if (result === 'failed') {
       setSubmitting(false) // let the learner retry
       return
     }
-    if (selected && !isGuest) toast.success('Thanks for sharing!')
+    if (result === 'saved') toast.success('Thanks for sharing!')
     onContinue()
   }
 

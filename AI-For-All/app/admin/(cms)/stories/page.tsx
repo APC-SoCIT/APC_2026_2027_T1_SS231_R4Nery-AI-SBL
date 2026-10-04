@@ -439,7 +439,7 @@ export default function AdminStoriesPage() {
         .st-filter-reset:hover{background:#fff0ee}
 
         /* Skeleton loader */
-        .st-skeleton{height:60px;border-radius:10px;background:linear-gradient(90deg,#eef0ff 25%,#f5f6ff 50%,#eef0ff 75%);background-size:200% 100%;animation:stShimmer 1.4s infinite;margin-bottom:2px}
+        .st-skeleton{height:60px;border-radius:10px;background:linear-gradient(90deg,var(--lavender) 25%,#f5f6ff 50%,var(--lavender) 75%);background-size:200% 100%;animation:stShimmer 1.4s infinite;margin-bottom:2px}
         @keyframes stShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
         /* Pagination */

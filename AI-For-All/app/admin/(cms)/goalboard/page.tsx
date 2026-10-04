@@ -13,16 +13,16 @@ import toast from 'react-hot-toast'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const TOPIC_COLORS: Record<string, string> = {
-  'AI Concepts':            '#818cf8',
-  'Smart Helpers':          '#38bdf8',
-  'Creative Thinking':      '#fb923c',
+  'AI Concepts': '#818cf8',
+  'Smart Helpers': '#38bdf8',
+  'Creative Thinking': '#fb923c',
   'Fairness in Technology': '#4ade80',
-  'Rate Limiting':          '#f87171',
-  'Prompt Engineering':     '#fbbf24',
-  'Ethics in AI':           '#a78bfa',
-  'Machine Learning':       '#34d399',
-  'Data & Privacy':         '#60a5fa',
-  'Robotics':               '#f472b6',
+  'Rate Limiting': '#f87171',
+  'Prompt Engineering': '#fbbf24',
+  'Ethics in AI': '#a78bfa',
+  'Machine Learning': '#34d399',
+  'Data & Privacy': '#60a5fa',
+  'Robotics': '#f472b6',
 }
 const PRESET_TOPICS = Object.keys(TOPIC_COLORS)
 const QUESTS_PER_PAGE = 8
@@ -54,12 +54,12 @@ function groupByTopics(stories: EnrichedStory[], sortKey: SortKey): TopicGroup[]
 function makeSorter(key: SortKey) {
   return (a: StoryModule, b: StoryModule) => {
     switch (key) {
-      case 'alpha-asc':  return a.title.localeCompare(b.title)
+      case 'alpha-asc': return a.title.localeCompare(b.title)
       case 'alpha-desc': return b.title.localeCompare(a.title)
-      case 'status':     return a.status.localeCompare(b.status)
-      case 'level':      return a.level.localeCompare(b.level)
-      case 'scenes':     return (b.scenes?.length ?? 0) - (a.scenes?.length ?? 0)
-      default:           return 0
+      case 'status': return a.status.localeCompare(b.status)
+      case 'level': return a.level.localeCompare(b.level)
+      case 'scenes': return (b.scenes?.length ?? 0) - (a.scenes?.length ?? 0)
+      default: return 0
     }
   }
 }
@@ -261,7 +261,7 @@ function AddQuestModal({ allStories, boardIds, allTopics, onClose, onAdd }: {
             </div>
           </div>
           <div className="gb-add-right">
-            <span className="gb-add-section-label">Assign to Topics <span style={{fontWeight:400,textTransform:'none',fontSize:'10px'}}>(select multiple)</span></span>
+            <span className="gb-add-section-label">Assign to Topics <span style={{ fontWeight: 400, textTransform: 'none', fontSize: '10px' }}>(select multiple)</span></span>
             {selected ? (
               <TopicChipPicker selected={topics} onChange={setTopics} knownTopics={allTopics} />
             ) : (
@@ -306,7 +306,7 @@ function FilterDropdown({ sort, setSort, statusFilter, setStatusFilter, levelFil
         <div className="gb-filter-panel">
           <div className="gb-filter-section">
             <label className="gb-filter-label"><ArrowUpAZ size={13} /> Sort Quests</label>
-            {([['alpha-asc','A \u2192 Z (Default)'],['alpha-desc','Z \u2192 A'],['status','By Status'],['level','By Level'],['scenes','Most Scenes']] as [SortKey,string][]).map(([val,label]) => (
+            {([['alpha-asc', 'A \u2192 Z (Default)'], ['alpha-desc', 'Z \u2192 A'], ['status', 'By Status'], ['level', 'By Level'], ['scenes', 'Most Scenes']] as [SortKey, string][]).map(([val, label]) => (
               <button key={val} className={`gb-filter-opt${sort === val ? ' active' : ''}`} onClick={() => setSort(val)}>
                 {sort === val && <Check size={12} />}{label}
               </button>
@@ -315,7 +315,7 @@ function FilterDropdown({ sort, setSort, statusFilter, setStatusFilter, levelFil
           <div className="gb-filter-divider" />
           <div className="gb-filter-section">
             <label className="gb-filter-label">Status</label>
-            {(['All','Published','Draft','Archived'] as StatusFilter[]).map(v => (
+            {(['All', 'Published', 'Draft', 'Archived'] as StatusFilter[]).map(v => (
               <button key={v} className={`gb-filter-opt${statusFilter === v ? ' active' : ''}`} onClick={() => setStatusFilter(v)}>
                 {statusFilter === v && <Check size={12} />}{v}
               </button>
@@ -324,7 +324,7 @@ function FilterDropdown({ sort, setSort, statusFilter, setStatusFilter, levelFil
           <div className="gb-filter-divider" />
           <div className="gb-filter-section">
             <label className="gb-filter-label">Level</label>
-            {(['All','Starter','Intermediate','Advanced']).map(v => (
+            {(['All', 'Starter', 'Intermediate', 'Advanced']).map(v => (
               <button key={v} className={`gb-filter-opt${levelFilter === v ? ' active' : ''}`} onClick={() => setLevelFilter(v)}>
                 {levelFilter === v && <Check size={12} />}{v}
               </button>
@@ -358,7 +358,7 @@ export default function AdminGoalboardPage() {
   const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       setLoading(true)
       const stories = await fetchAllStories()
       setAllStories(stories)
@@ -542,7 +542,7 @@ export default function AdminGoalboardPage() {
         .gb-btn-secondary:hover{background:#f5f6ff}
         .gb-btn-xs{padding:5px 10px;font-size:11px;border-radius:7px}
         .gb-loading{display:flex;flex-direction:column;gap:12px}
-        .gb-skeleton{height:68px;border-radius:14px;background:linear-gradient(90deg,#eef0ff 25%,#f5f6ff 50%,#eef0ff 75%);background-size:200% 100%;animation:gbShimmer 1.4s infinite}
+        .gb-skeleton{height:68px;border-radius:14px;background:linear-gradient(90deg,var(--lavender) 25%,#f5f6ff 50%,var(--lavender) 75%);background-size:200% 100%;animation:gbShimmer 1.4s infinite}
         @keyframes gbShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         .gb-empty{display:grid;place-items:center;text-align:center;padding:60px 20px;color:var(--muted);background:var(--white);border-radius:14px;box-shadow:0 4px 18px rgba(38,48,105,.06)}
         .gb-empty svg{margin-bottom:14px;opacity:.35}

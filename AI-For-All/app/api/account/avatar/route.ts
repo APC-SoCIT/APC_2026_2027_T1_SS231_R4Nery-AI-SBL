@@ -119,3 +119,44 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ avatarUrl })
 }
+
+// ─── PATCH /api/account/avatar ────────────────────────────────────────────────
+// Stores a preset avatar URL (e.g. a public path like /ai-for-all/avatars/avatar-1.png)
+// without file upload. Useful when the user picks one of the built-in icon options.
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await buildServerClient()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+
+  if (authErr || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  let body: { avatarUrl?: string }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+  }
+
+  const { avatarUrl } = body
+  if (!avatarUrl || typeof avatarUrl !== 'string') {
+    return NextResponse.json({ error: 'avatarUrl is required.' }, { status: 400 })
+  }
+
+  // Only allow preset paths (must start with /ai-for-all/avatars/)
+  if (!avatarUrl.startsWith('/ai-for-all/avatars/')) {
+    return NextResponse.json({ error: 'Invalid avatar URL.' }, { status: 400 })
+  }
+
+  const { error: updateErr } = await supabase
+    .from('users')
+    .update({ avatar_url: avatarUrl } as any)
+    .eq('user_id', user.id)
+
+  if (updateErr) {
+    return NextResponse.json({ error: updateErr.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ avatarUrl })
+}
