@@ -14,6 +14,8 @@ import toast from 'react-hot-toast'
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
 
 const PROGRESS_KEY_PREFIX = 'ai-for-all:story-progress:'
+// localStorage key for a story completed by a guest that needs to be synced after sign-in
+export const PENDING_STORY_KEY = 'ai-for-all:pending-story-completion'
 // How long the three-dot typing indicator shows before narration/dialogue appears
 const TYPING_DELAY_MS = 700
 
@@ -111,15 +113,24 @@ export default function StoryScenePage() {
     }
   }, [isGuest])
 
-  // Auto-open the sign-up prompt when a guest clears the story (P1.6)
-  // and save progress when a registered user finishes the story (the
-  // Reaction Page is the first screen after the last story step).
+  // When a guest reaches 'cleared', persist the storyId so it can be synced
+  // to the database automatically once the guest signs in or creates an account.
+  // When an authenticated user reaches 'cleared', save progress immediately.
   useEffect(() => {
     if (step === 'cleared') {
-      if (isGuest) {
-        setShowSignupPrompt(true)
+      if (isGuest && story) {
+        // Store the pending completion so sign-in/sign-up pages can flush it.
+        try {
+          localStorage.setItem(PENDING_STORY_KEY, story.id)
+        } catch {
+          // localStorage may be unavailable — non-fatal
+        }
+        setShowSignupPrompt(false) // cleared screen has its own inline CTA
+      } else if (!isGuest && story) {
+        saveProgress(story.id)
       }
     } else if (step === 'reaction' && !isGuest && story) {
+      // Also save on the reaction step for authenticated users (belt-and-suspenders)
       saveProgress(story.id)
     }
   }, [step, isGuest, story, saveProgress])
@@ -345,15 +356,19 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
       <h1 className="story-cleared-title">Story Cleared!</h1>
       <div className="story-cleared-card">
         {isGuest ? (
+          // ── Guest flow ────────────────────────────────────────────────────
+          // The pending story ID is stored in localStorage (see PENDING_STORY_KEY)
+          // before this screen renders, so that after the guest signs in or
+          // creates an account the completion is synced automatically.
           <>
-            {/* Row 1: Unlock */}
+            {/* Row 1: Sign In CTA */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
                 <Lock size={20} />
               </div>
-              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
-              <Link href="/sign-up" className="story-cleared-btn">
-                Sign Up
+              <strong className="story-cleared-cta-label">Save your progress!</strong>
+              <Link href="/sign-in" className="story-cleared-btn">
+                Sign In
               </Link>
             </div>
             <div className="story-cleared-divider" />
@@ -379,38 +394,43 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
             </Link>
           </>
         ) : (
+          // ── Authenticated flow ────────────────────────────────────────────
           <>
-            {/* Row 1: Sign Up */}
+            {/* Row 1: Complete another story */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--lock">
-                <Lock size={20} />
+                <BookOpen size={20} />
               </div>
-              <strong className="story-cleared-cta-label">Unlock more stories!</strong>
-              <Link href="/sign-up" className="story-cleared-btn">
-                Sign Up
+              <strong className="story-cleared-cta-label">Keep the momentum going!</strong>
+              <Link href="/stories" className="story-cleared-btn">
+                Another Story
               </Link>
             </div>
             <div className="story-cleared-divider" />
-            {/* Row 2: Story / IBM SkillsBuild */}
+            {/* Row 2: Return to Home Screen */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
-                <BookOpen size={20} />
-                <Star size={10} className="story-cleared-book-star" />
+                <Star size={20} />
               </div>
-              <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
-              {story.skillsBuildUrl ? (
-                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
-                  Story
-                </a>
-              ) : (
-                <Link href={`/stories/${story.id}`} className="story-cleared-btn">
-                  Story
-                </Link>
-              )}
+              <strong className="story-cleared-cta-label">You&apos;re doing great!</strong>
+              <Link href="/home" className="story-cleared-btn">
+                Home Screen
+              </Link>
             </div>
-            <Link href="/home" className="story-cleared-back">
-              Back
-            </Link>
+            <div className="story-cleared-divider" />
+            {/* Row 3: IBM SkillsBuild */}
+            {story.skillsBuildUrl && (
+              <div className="story-cleared-cta-row">
+                <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                  <BookOpen size={20} />
+                  <Star size={10} className="story-cleared-book-star" />
+                </div>
+                <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                </a>
+              </div>
+            )}
           </>
         )}
       </div>

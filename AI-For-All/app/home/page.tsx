@@ -7,6 +7,7 @@ import { Bookmark, BookOpen, ChevronRight } from 'lucide-react'
 import { useSession } from '@/lib/sessionContext'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
 import { createClient } from '@/lib/supabase/client'
+import { PENDING_STORY_KEY } from '@/app/stories/[storyId]/page'
 
 type Snap = 'hero' | 'default' | 'expanded'
 const SNAP_TOP: Record<Snap, number> = { hero: 60, default: 40, expanded: 10 }
@@ -96,6 +97,22 @@ export default function HomePage() {
     }
     fetchName()
   }, [session])
+
+  // ── Flush any pending guest story completion (e.g. after Google OAuth) ─────
+  useEffect(() => {
+    if (sessionLoading || !session || session.isGuest) return
+    const storyId = (() => {
+      try { return localStorage.getItem(PENDING_STORY_KEY) } catch { return null }
+    })()
+    if (!storyId) return
+    fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storyId }),
+    }).finally(() => {
+      try { localStorage.removeItem(PENDING_STORY_KEY) } catch { /* ignore */ }
+    })
+  }, [session, sessionLoading])
 
   // ── Fetch real per-user progress ───────────────────────────────────────────
   useEffect(() => {
