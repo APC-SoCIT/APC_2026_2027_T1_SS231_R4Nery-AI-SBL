@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3, BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
+import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -25,7 +25,6 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     { name: 'Goalboard', path: '/admin/goalboard', icon: Target },
     { name: 'Stories', path: '/admin/stories', icon: BookOpen },
     { name: 'Learners', path: '/admin/learners', icon: Users },
-    { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 }
   ]
 
   const activeTab = navItems.find(item => pathname.startsWith(item.path))?.name || 'Overview'
