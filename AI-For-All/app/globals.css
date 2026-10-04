@@ -545,6 +545,17 @@ a.primary-button, a.secondary-button, a.text-button, a.launch-button, a.outline-
 .prof-pw-success { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; background:#eef8d5; color:#3a6b0e; font-size:13px; font-weight:700; margin-bottom:10px; }
 .prof-pw-errors { margin:0 0 10px; padding:10px 14px 10px 28px; border-radius:12px; background:#fff0ee; color:#c0392b; font-size:13px; font-weight:600; }
 .prof-pw-errors li { margin-bottom:2px; }
+/* Password field with eye toggle */
+.prof-pw-field-wrap { position:relative; display:flex; align-items:center; }
+.prof-pw-field-wrap .prof-sub-input { padding-right:46px; }
+.prof-pw-eye { position:absolute; right:12px; display:grid; place-items:center; width:32px; height:32px; border-radius:8px; background:transparent; color:var(--muted); transition:color .15s; }
+.prof-pw-eye:hover { color:var(--apc-navy-deep); }
+/* Avatar picker */
+.prof-avatar-picker { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+.prof-avatar-option { position:relative; width:58px; height:58px; border-radius:50%; overflow:hidden; border:3px solid transparent; box-shadow:0 2px 8px rgba(0,0,0,.10); transition:border-color .18s, transform .15s; flex-shrink:0; }
+.prof-avatar-option:hover { transform:scale(1.07); border-color:var(--apc-blue); }
+.prof-avatar-option.selected { border-color:var(--apc-navy-deep); box-shadow:0 0 0 3px var(--apc-yellow); }
+.prof-avatar-option-check { position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,31,63,.45); color:#fff; border-radius:50%; }
 @media (min-width:900px) { .prof-hero, .prof-sub-hero { padding:24px 40px 72px; }.prof-hero-back, .prof-sub-back { left:0; }.prof-hero-bar, .prof-sub-hero-bar { max-width:1100px; margin:0 auto; } }
 
 .authpage-password-hint { margin:-8px 0 12px; font-size:11px; line-height:1.4; opacity:.9; }
