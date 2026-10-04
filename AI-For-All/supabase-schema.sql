@@ -47,8 +47,15 @@ CREATE TABLE IF NOT EXISTS public.users (
   email        VARCHAR(100),
   role         TEXT NOT NULL DEFAULT 'guest', -- 'guest' | 'user' | 'facilitator' | 'admin'
   phone_num    TEXT,
+  avatar_url   TEXT,                          -- Profile picture URL (Supabase Storage / avatars bucket)
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Run this if the users table was already created without avatar_url:
+-- ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Also create a public Storage bucket named "avatars" in the Supabase dashboard
+-- (Storage → New bucket → name: avatars → Public: on).
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
