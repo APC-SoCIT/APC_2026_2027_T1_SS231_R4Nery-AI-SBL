@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Sun, Lock, BookOpen, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Send, Sun, Lock, BookOpen, Star, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { trackStoryPresence } from '@/lib/supabase/presence'
 import { StoryModule } from '@/lib/story-data'
@@ -28,6 +28,8 @@ export default function StoryScenePage() {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  // Weight of every choice made so far, so going back can undo the score
+  const [history, setHistory] = useState<number[]>([])
   const presenceCleanup = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function StoryScenePage() {
               setSceneIndex(parsed.sceneIndex)
               setScore(parsed.score ?? 0)
               setPromptText(parsed.promptText ?? '')
+              setHistory(Array.isArray(parsed.history) ? parsed.history : [])
               setStep(parsed.step ?? 'scene')
             }
           } catch {
@@ -68,12 +71,12 @@ export default function StoryScenePage() {
     if (typeof window === 'undefined' || !story) return
     const key = PROGRESS_KEY_PREFIX + story.id
     if (step === 'scene' || step === 'gate' || step === 'activity' || step === 'response') {
-      sessionStorage.setItem(key, JSON.stringify({ step, sceneIndex, score, promptText }))
+      sessionStorage.setItem(key, JSON.stringify({ step, sceneIndex, score, promptText, history }))
     } else if (step === 'reaction' || step === 'cleared') {
       // Story finished — clear saved progress so a future visit starts fresh.
       sessionStorage.removeItem(key)
     }
-  }, [story, step, sceneIndex, score, promptText])
+  }, [story, step, sceneIndex, score, promptText, history])
 
   // Track presence while the learner is on this story page
   useEffect(() => {
@@ -189,6 +192,7 @@ export default function StoryScenePage() {
   function choose(weight: number) {
     if (!story) return
     setScore((s) => s + weight)
+    setHistory((h) => [...h, weight])
     const isLastScene = sceneIndex >= story.scenes.length - 1
     if (!isLastScene) {
       setSceneIndex((i) => i + 1)
@@ -201,6 +205,37 @@ export default function StoryScenePage() {
     } else {
       setStep('reaction')
     }
+  }
+
+  // Step back one screen: previous scene, or the splash art from the first scene
+  function goBack() {
+    if (!story) return
+    if (step === 'response') {
+      setStep('activity')
+      return
+    }
+    // Undo the most recent choice so the score matches the scene being revisited
+    const undoLastChoice = () => {
+      const last = history[history.length - 1] ?? 0
+      setScore((s) => s - last)
+      setHistory((h) => h.slice(0, -1))
+    }
+    if (step === 'gate' || step === 'activity') {
+      undoLastChoice()
+      setSceneIndex(story.scenes.length - 1)
+      setStep('scene')
+      return
+    }
+    if (sceneIndex > 0) {
+      undoLastChoice()
+      setSceneIndex((i) => i - 1)
+      return
+    }
+    // First scene: back to the splash art and start fresh
+    sessionStorage.removeItem(PROGRESS_KEY_PREFIX + story.id)
+    setScore(0)
+    setHistory([])
+    setStep('splash')
   }
 
   function submitActivity(e: FormEvent) {
@@ -231,6 +266,7 @@ export default function StoryScenePage() {
           onClick={() => {
             setSceneIndex(0)
             setScore(0)
+            setHistory([])
             setStep('scene')
           }}
         >
@@ -246,10 +282,22 @@ export default function StoryScenePage() {
   return (
     <main className="story-scene-page story-session-layout">
       <div className="story-scene-header">
-        <button type="button" onClick={() => router.push('/stories')} aria-label="Exit story">
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label={step === 'scene' && sceneIndex === 0 ? 'Back to story intro' : 'Previous'}
+        >
           <ArrowLeft size={18} />
         </button>
         <strong>{story.title}</strong>
+        <button
+          type="button"
+          className="story-scene-exit"
+          onClick={() => router.push('/stories')}
+          aria-label="Exit story"
+        >
+          <X size={18} />
+        </button>
       </div>
       <div className="story-scene-avatar">
         <img

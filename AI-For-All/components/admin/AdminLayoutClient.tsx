@@ -1,15 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { BarChart3, BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getMockSession } from '@/lib/mock-auth'
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [adminName, setAdminName] = useState('Admin')
+
+  useEffect(() => {
+    ;(async () => {
+      const mock = getMockSession()
+      if (mock) {
+        setAdminName(mock.name || 'Admin')
+        return
+      }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setAdminName(user.user_metadata?.display_name || 'Admin')
+      }
+    })()
+  }, [supabase.auth, pathname])
 
   if (pathname === '/admin') {
     return <>{children}</>
@@ -25,10 +41,10 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     { name: 'Goalboard', path: '/admin/goalboard', icon: Target },
     { name: 'Stories', path: '/admin/stories', icon: BookOpen },
     { name: 'Learners', path: '/admin/learners', icon: Users },
-    { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 }
   ]
 
-  const activeTab = navItems.find(item => pathname.startsWith(item.path))?.name || 'Overview'
+  const activeTab = navItems.find(item => pathname.startsWith(item.path))?.name
+    || (pathname.startsWith('/admin/settings') ? 'Settings' : 'Overview')
 
   return (
     <div className="admin-shell">
@@ -49,7 +65,9 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         ))}
 
         <div className="sidebar-bottom">
-          <button><Settings size={18} /> Settings</button>
+          <Link href="/admin/settings" className={pathname.startsWith('/admin/settings') ? 'side-active' : ''}>
+            <Settings size={18} /> Settings
+          </Link>
           <button onClick={handleLogout}><LogOut size={18} /> Sign out</button>
         </div>
       </aside>
@@ -61,9 +79,9 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             <h1>{activeTab === 'Dashboard' ? 'Good morning, Admin.' : activeTab}</h1>
           </div>
           <div className="admin-user">
-            <span>AF</span>
+            <span>{adminName.substring(0, 2).toUpperCase()}</span>
             <div>
-              <strong>Admin</strong>
+              <strong>{adminName}</strong>
               <small>Facilitator</small>
             </div>
           </div>
