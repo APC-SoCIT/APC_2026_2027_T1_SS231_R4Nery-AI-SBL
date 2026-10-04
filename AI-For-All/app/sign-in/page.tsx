@@ -13,6 +13,7 @@ import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
 import { GoogleIcon } from '@/components/auth/social-icons'
 import { createClient } from '@/lib/supabase/client'
 import { isMockEmail, mockSignIn, shouldUseMockAuth } from '@/lib/mock-auth'
+import { PENDING_STORY_KEY } from '@/app/stories/[storyId]/page'
 
 const SUPABASE_ERRORS: Record<string, string> = {
   invalid_credentials: 'Incorrect email or password.',
@@ -29,6 +30,25 @@ const SUPABASE_CONFIGURED =
   typeof process !== 'undefined' &&
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+/**
+ * After the guest signs in, sync any story they completed as a guest.
+ * The storyId was persisted to localStorage by the Story Cleared screen.
+ */
+async function flushPendingStoryCompletion() {
+  try {
+    const storyId = localStorage.getItem(PENDING_STORY_KEY)
+    if (!storyId) return
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storyId }),
+    })
+    localStorage.removeItem(PENDING_STORY_KEY)
+  } catch {
+    // Non-fatal — progress sync failure should not interrupt the redirect
+  }
+}
 
 export default function SignInPage() {
   const router = useRouter()
@@ -85,11 +105,13 @@ export default function SignInPage() {
           .single()
 
         if (userRow?.role === 'admin' || userRow?.role === 'facilitator') {
+          await flushPendingStoryCompletion()
           router.push('/admin')
           return
         }
       }
 
+      await flushPendingStoryCompletion()
       router.push('/home')
     } finally {
       setSubmitting(false)
