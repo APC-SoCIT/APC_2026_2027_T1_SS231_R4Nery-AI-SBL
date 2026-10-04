@@ -284,7 +284,7 @@ export default function CreateStoryWizard() {
               </div>
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Difficulty Level</label>
+                  <label className={styles.inputLabel}>Level</label>
                   <select className={styles.selectInput} value={level} onChange={e => setLevel(e.target.value)}>
                     <option value="Starter">Starter</option>
                     <option value="Intermediate">Intermediate</option>
@@ -296,7 +296,6 @@ export default function CreateStoryWizard() {
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Number of Scenes</label>
                   <select className={styles.selectInput} value={sceneCount} onChange={e => setSceneCount(Number(e.target.value))}>
-                    <option value={2}>2 Scenes</option>
                     <option value={3}>3 Scenes</option>
                     <option value={4}>4 Scenes</option>
                     <option value={5}>5 Scenes</option>
