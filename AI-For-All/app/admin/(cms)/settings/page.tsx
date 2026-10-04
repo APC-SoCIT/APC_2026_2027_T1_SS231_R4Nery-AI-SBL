@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getMockSession, updateMockSession } from '@/lib/mock-auth'
 
 export default function AdminSettingsPage() {
   const supabase = createClient()
@@ -31,7 +32,14 @@ export default function AdminSettingsPage() {
 
   // Load current username on mount
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
+      const mockSession = getMockSession()
+      if (mockSession) {
+        setUsername(mockSession.name)
+        setOriginalUsername(mockSession.name)
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       const name = user?.user_metadata?.display_name ?? user?.email ?? ''
       setUsername(name)
@@ -52,6 +60,15 @@ export default function AdminSettingsPage() {
       return
     }
     setUserLoading(true)
+    const mockSession = getMockSession()
+    if (mockSession) {
+      updateMockSession({ name: username.trim() })
+      setOriginalUsername(username.trim())
+      setToast({ type: 'success', msg: 'Username updated successfully!' })
+      setUserLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({
       data: { display_name: username.trim() },
     })
@@ -75,6 +92,17 @@ export default function AdminSettingsPage() {
       return
     }
     setPassLoading(true)
+    const mockSession = getMockSession()
+    if (mockSession) {
+      setTimeout(() => {
+        setNewPassword('')
+        setConfirmPassword('')
+        setToast({ type: 'success', msg: 'Password changed successfully!' })
+        setPassLoading(false)
+      }, 500)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPassLoading(false)
     if (error) {
@@ -101,7 +129,7 @@ export default function AdminSettingsPage() {
 
       {/* ── Change Username ─────────────────────────────────── */}
       <form className="settings-card" onSubmit={handleUsernameSubmit}>
-        <div className="settings-card-icon" style={{ background: '#e0e7ff', color: '#6366f1' }}>
+        <div className="settings-card-icon" style={{ background: 'var(--lavender-deep)', color: 'var(--ink)' }}>
           <User size={22} />
         </div>
         <h2>Change Username</h2>
@@ -131,7 +159,7 @@ export default function AdminSettingsPage() {
 
       {/* ── Change Password ─────────────────────────────────── */}
       <form className="settings-card" onSubmit={handlePasswordSubmit}>
-        <div className="settings-card-icon" style={{ background: '#fce7f3', color: '#ec4899' }}>
+        <div className="settings-card-icon" style={{ background: '#ffeeed', color: 'var(--coral)' }}>
           <Lock size={22} />
         </div>
         <h2>Change Password</h2>
@@ -186,7 +214,7 @@ export default function AdminSettingsPage() {
 
         <button
           type="submit"
-          className="settings-save settings-save--pink"
+          className="settings-save settings-save--coral"
           disabled={passLoading || !newPassword || !confirmPassword}
         >
           {passLoading ? <><Loader2 size={15} className="dash-spin" /> Updating…</> : 'Update Password'}

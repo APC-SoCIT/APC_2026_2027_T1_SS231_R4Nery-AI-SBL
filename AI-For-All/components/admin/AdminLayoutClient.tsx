@@ -1,15 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getMockSession } from '@/lib/mock-auth'
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [adminName, setAdminName] = useState('Admin')
+
+  useEffect(() => {
+    ;(async () => {
+      const mock = getMockSession()
+      if (mock) {
+        setAdminName(mock.name || 'Admin')
+        return
+      }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setAdminName(user.user_metadata?.display_name || 'Admin')
+      }
+    })()
+  }, [supabase.auth, pathname])
 
   if (pathname === '/admin' || pathname === '/admin/login') {
     return <>{children}</>
@@ -63,9 +79,9 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             <h1>{activeTab === 'Dashboard' ? 'Good morning, Admin.' : activeTab}</h1>
           </div>
           <div className="admin-user">
-            <span>AF</span>
+            <span>{adminName.substring(0, 2).toUpperCase()}</span>
             <div>
-              <strong>Admin</strong>
+              <strong>{adminName}</strong>
               <small>Facilitator</small>
             </div>
           </div>

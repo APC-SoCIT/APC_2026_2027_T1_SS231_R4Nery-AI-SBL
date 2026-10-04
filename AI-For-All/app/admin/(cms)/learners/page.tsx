@@ -30,9 +30,9 @@ const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
 }
 const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
-  guest:      { bg: '#f1f5f9', color: '#64748b' },
+  guest: { bg: '#f1f5f9', color: '#64748b' },
   registered: { bg: '#e8faf0', color: '#1a7a45' },
-  admin:      { bg: '#ece9ff', color: '#6d5fbc' },
+  admin: { bg: '#ece9ff', color: '#6d5fbc' },
 }
 
 // ── Learner row ───────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ function LearnerRow({ learner }: { learner: Learner }) {
       {/* Name + email */}
       <div className="lr-info">
         <strong>{[learner.username, learner.user_sname].filter(Boolean).join(' ') || 'Unnamed'}</strong>
-        {learner.email && <small><Mail size={11} style={{marginRight:3}} />{learner.email}</small>}
+        {learner.email && <small><Mail size={11} style={{ marginRight: 3 }} />{learner.email}</small>}
       </div>
       {/* Role badge */}
       <span className="lr-role-badge" style={{ background: rc.bg, color: rc.color }}>
@@ -93,9 +93,9 @@ function FilterDropdown({ sort, setSort, roleFilter, setRoleFilter }: {
             {([
               ['joined-newest', 'Newest First'],
               ['joined-oldest', 'Oldest First'],
-              ['name-asc',     'Name A → Z'],
-              ['name-desc',    'Name Z → A'],
-              ['role',         'By Role'],
+              ['name-asc', 'Name A → Z'],
+              ['name-desc', 'Name Z → A'],
+              ['role', 'By Role'],
             ] as [SortKey, string][]).map(([val, label]) => (
               <button key={val} className={`lr-filter-opt${sort === val ? ' active' : ''}`} onClick={() => setSort(val)}>
                 {sort === val && <Check size={12} />}{label}
@@ -167,12 +167,12 @@ export default function AdminLearnersPage() {
     }
     return [...list].sort((a, b) => {
       switch (sort) {
-        case 'name-asc':     return (a.username ?? '').localeCompare(b.username ?? '')
-        case 'name-desc':    return (b.username ?? '').localeCompare(a.username ?? '')
-        case 'role':         return (a.role ?? '').localeCompare(b.role ?? '')
+        case 'name-asc': return (a.username ?? '').localeCompare(b.username ?? '')
+        case 'name-desc': return (b.username ?? '').localeCompare(a.username ?? '')
+        case 'role': return (a.role ?? '').localeCompare(b.role ?? '')
         case 'joined-oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         case 'joined-newest':
-        default:             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       }
     })
   }, [learners, query, roleFilter, sort])
@@ -332,7 +332,7 @@ export default function AdminLearnersPage() {
         .lr-list{display:flex;flex-direction:column;gap:4px}
         .lr-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--white);box-shadow:0 2px 10px rgba(38,48,105,.05);transition:box-shadow .15s}
         .lr-row:hover{box-shadow:0 4px 18px rgba(38,48,105,.09)}
-        .lr-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#818cf8,#5b5ee0);color:#fff;font-size:13px;font-weight:800;flex-shrink:0}
+        .lr-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--lavender-deep);color:var(--ink);font-size:13px;font-weight:800;flex-shrink:0}
         .lr-info{flex:1;min-width:0}
         .lr-info strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .lr-info small{display:flex;align-items:center;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -344,7 +344,7 @@ export default function AdminLearnersPage() {
         .lr-empty svg{margin-bottom:14px;opacity:.35}
         .lr-empty h3{margin:0 0 8px;color:var(--ink);font-size:18px}
         .lr-empty p{margin:0;font-size:13px}
-        .lr-skeleton{height:62px;border-radius:12px;background:linear-gradient(90deg,#eef0ff 25%,#f5f6ff 50%,#eef0ff 75%);background-size:200% 100%;animation:lrShimmer 1.4s infinite}
+        .lr-skeleton{height:62px;border-radius:12px;background:linear-gradient(90deg,var(--lavender) 25%,#f5f6ff 50%,var(--lavender) 75%);background-size:200% 100%;animation:lrShimmer 1.4s infinite}
         @keyframes lrShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
         /* Pagination */

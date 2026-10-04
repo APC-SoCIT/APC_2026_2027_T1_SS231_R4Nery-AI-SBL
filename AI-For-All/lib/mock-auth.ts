@@ -51,6 +51,17 @@ export function getMockSession(): MockUser | null {
   return raw ? (JSON.parse(raw) as MockUser) : null
 }
 
+export function updateMockSession(updates: Partial<MockUser>): MockUser | null {
+  if (typeof window === 'undefined') return null
+  const current = getMockSession()
+  if (current) {
+    const updated = { ...current, ...updates }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    return updated
+  }
+  return null
+}
+
 export function clearMockSession() {
   if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY)
 }
