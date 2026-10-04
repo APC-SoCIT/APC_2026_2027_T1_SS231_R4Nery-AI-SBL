@@ -27,7 +27,8 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     { name: 'Learners', path: '/admin/learners', icon: Users },
   ]
 
-  const activeTab = navItems.find(item => pathname.startsWith(item.path))?.name || 'Overview'
+  const activeTab = navItems.find(item => pathname.startsWith(item.path))?.name
+    || (pathname.startsWith('/admin/settings') ? 'Settings' : 'Overview')
 
   return (
     <div className="admin-shell">
@@ -48,7 +49,9 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         ))}
 
         <div className="sidebar-bottom">
-          <button><Settings size={18} /> Settings</button>
+          <Link href="/admin/settings" className={pathname.startsWith('/admin/settings') ? 'side-active' : ''}>
+            <Settings size={18} /> Settings
+          </Link>
           <button onClick={handleLogout}><LogOut size={18} /> Sign out</button>
         </div>
       </aside>
