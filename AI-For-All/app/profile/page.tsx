@@ -6,7 +6,7 @@
  * Profile Hub — three in-page views:
  *   1. Main view   — avatar, name, role, stats, menu (Profile Details / Settings / Log out)
  *   2. Details     — change avatar photo + display name
- *   3. Settings    — delete account (with confirm dialog)
+ *   3. Settings    — change password + deactivate account (with confirm dialog)
  *
  * Matches the app's APC blue design system; uses the same bottom nav as Home.
  */
@@ -15,7 +15,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Camera, Check, ChevronRight,
-  LogOut, Settings, Trash2, UserRound,
+  LogOut, Settings, UserRound, Lock, PowerOff,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
@@ -33,7 +33,6 @@ interface ProfileData {
 
 interface Progress {
   completedModules: string[]
-  totalPoints: number
 }
 
 type View = 'main' | 'details' | 'settings'
@@ -43,6 +42,16 @@ type View = 'main' | 'details' | 'settings'
 function getInitials(name: string | null, email: string | null): string {
   if (name) return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
   return (email ?? 'U')[0].toUpperCase()
+}
+
+/** Map the raw DB role value to a user-facing display label. */
+function getRoleLabel(role: string | undefined): string {
+  if (!role) return 'MallGoers'
+  const r = role.toLowerCase()
+  if (r === 'guest' || r === 'user' || r === 'mallgoer' || r === 'mall_goer') return 'MallGoers'
+  if (r === 'facilitator') return 'Facilitator'
+  if (r === 'admin') return 'Admin'
+  return 'MallGoers'
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -61,9 +70,17 @@ export default function ProfileHubPage() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [localAvatar, setLocalAvatar] = useState<string | null>(null)
 
-  // Settings state
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  // Settings — Deactivation state
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
+  const [deactivating, setDeactivating] = useState(false)
+
+  // Settings — Change Password state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwErrors, setPwErrors] = useState<string[]>([])
+  const [changingPw, setChangingPw] = useState(false)
+  const [pwSuccess, setPwSuccess] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const detailsFileInputRef = useRef<HTMLInputElement>(null)
@@ -99,7 +116,8 @@ export default function ProfileHubPage() {
         setName(profileData.name ?? '')
 
         if (progressRes.ok) {
-          setProgress(await progressRes.json())
+          const prog = await progressRes.json()
+          setProgress({ completedModules: prog.completedModules ?? [] })
         }
       } catch (err: any) {
         toast.error(err.message ?? 'Failed to load profile.')
@@ -115,7 +133,6 @@ export default function ProfileHubPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Optimistic preview
     const objectUrl = URL.createObjectURL(file)
     setLocalAvatar(objectUrl)
     setAvatarUploading(true)
@@ -130,11 +147,10 @@ export default function ProfileHubPage() {
       setProfile(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev)
       toast.success('Profile photo updated!')
     } catch (err: any) {
-      setLocalAvatar(profile?.avatarUrl ?? null)   // revert
+      setLocalAvatar(profile?.avatarUrl ?? null)
       toast.error(err.message ?? 'Upload failed.')
     } finally {
       setAvatarUploading(false)
-      // Reset the file input so the same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = ''
       if (detailsFileInputRef.current) detailsFileInputRef.current.value = ''
     }
@@ -170,22 +186,78 @@ export default function ProfileHubPage() {
     router.push('/get-started')
   }
 
-  // ── Delete account ───────────────────────────────────────────────────────────
-  async function handleDelete() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
-    setDeleting(true)
+  // ── Deactivate account ───────────────────────────────────────────────────────
+  async function handleDeactivate() {
+    setDeactivating(true)
     try {
-      const res = await fetch('/api/account', { method: 'DELETE' })
+      const res = await fetch('/api/account/deactivate', { method: 'POST' })
       if (!res.ok) {
         const d = await res.json()
-        throw new Error(d.error ?? 'Deletion failed.')
+        throw new Error(d.error ?? 'Deactivation failed.')
       }
-      toast.success('Account deleted. Goodbye!')
+      // Sign out after deactivation
+      const supabase = createClient()
+      await supabase.auth.signOut({ scope: 'global' })
+      toast.success('Your account has been deactivated.')
       router.push('/get-started')
     } catch (err: any) {
       toast.error(err.message)
-      setDeleting(false)
-      setConfirmDelete(false)
+      setDeactivating(false)
+      setConfirmDeactivate(false)
+    }
+  }
+
+  // ── Change password ──────────────────────────────────────────────────────────
+  function validateNewPassword(pw: string): string[] {
+    const errors: string[] = []
+    if (pw.length < 8) errors.push('Password must be at least 8 characters.')
+    return errors
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPwErrors([])
+    setPwSuccess(false)
+
+    // Client-side validation
+    const validationErrors = validateNewPassword(newPassword)
+    if (validationErrors.length > 0) { setPwErrors(validationErrors); return }
+    if (newPassword !== confirmPassword) {
+      setPwErrors(['New password and confirmation do not match.'])
+      return
+    }
+    if (!currentPassword) {
+      setPwErrors(['Please enter your current password.'])
+      return
+    }
+
+    setChangingPw(true)
+    try {
+      const supabase = createClient()
+
+      // Verify current password by re-signing in with the user's email
+      if (!profile?.email) throw new Error('Unable to verify identity. Please try again.')
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: currentPassword,
+      })
+      if (signInErr) {
+        setPwErrors(['Current password is incorrect.'])
+        return
+      }
+
+      // Update to the new password
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateErr) throw new Error(updateErr.message)
+
+      setPwSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: any) {
+      setPwErrors([err.message ?? 'Failed to change password. Please try again.'])
+    } finally {
+      setChangingPw(false)
     }
   }
 
@@ -197,13 +269,8 @@ export default function ProfileHubPage() {
   // ── Derived values ─────────────────────────────────────────────────────────
   const initials = getInitials(profile?.name ?? null, profile?.email ?? null)
   const completedCount = progress?.completedModules?.length ?? 0
-  const totalPoints = progress?.totalPoints ?? 0
-  const goalCount = 1   // single "Understand AI Basics" goal
-
-  const roleLabel = profile?.role
-    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
-    : 'Learner'
-
+  const goalCount = 1
+  const roleLabel = getRoleLabel(profile?.role)
   const nameChanged = name.trim() !== (profile?.name ?? '') && name.trim().length > 0
 
   // ── Avatar render helper ────────────────────────────────────────────────────
@@ -325,7 +392,15 @@ export default function ProfileHubPage() {
               <button
                 id="settings-back-btn"
                 className="prof-sub-back"
-                onClick={() => { setConfirmDelete(false); setView('main') }}
+                onClick={() => {
+                  setConfirmDeactivate(false)
+                  setPwErrors([])
+                  setPwSuccess(false)
+                  setCurrentPassword('')
+                  setNewPassword('')
+                  setConfirmPassword('')
+                  setView('main')
+                }}
                 aria-label="Back to profile"
               >
                 <ArrowLeft size={18} />
@@ -336,28 +411,110 @@ export default function ProfileHubPage() {
 
           {/* Body */}
           <div className="prof-sub-body">
-            {/* Danger zone */}
-            <div className="prof-settings-section">
-              <p className="prof-settings-heading">Danger Zone</p>
 
-              {confirmDelete ? (
+            {/* ── Change Password ─────────────────────────────────────────── */}
+            <div className="prof-settings-section">
+              <p className="prof-settings-heading">
+                <Lock size={13} style={{ flexShrink: 0 }} />
+                Change Password
+              </p>
+
+              {pwSuccess && (
+                <div className="prof-pw-success" role="status" aria-live="polite">
+                  ✓ Password changed successfully!
+                </div>
+              )}
+
+              {pwErrors.length > 0 && (
+                <ul className="prof-pw-errors" role="alert" aria-live="polite">
+                  {pwErrors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              )}
+
+              <form onSubmit={handleChangePassword} className="prof-sub-form" style={{ marginTop: 8 }} autoComplete="off">
+                <label className="prof-sub-label">
+                  <span className="prof-sub-label-text">Current Password</span>
+                  <input
+                    id="settings-current-password"
+                    className="prof-sub-input"
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </label>
+
+                <label className="prof-sub-label">
+                  <span className="prof-sub-label-text">New Password</span>
+                  <input
+                    id="settings-new-password"
+                    className="prof-sub-input"
+                    type="password"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
+                    placeholder="At least 8 characters"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </label>
+
+                <label className="prof-sub-label">
+                  <span className="prof-sub-label-text">Confirm New Password</span>
+                  <input
+                    id="settings-confirm-password"
+                    className="prof-sub-input"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
+                    placeholder="Repeat new password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </label>
+
+                <button
+                  id="settings-change-password-btn"
+                  type="submit"
+                  className={`prof-sub-save${currentPassword && newPassword && confirmPassword ? ' is-ready' : ''}`}
+                  disabled={changingPw || !currentPassword || !newPassword || !confirmPassword}
+                  style={{ marginTop: 4 }}
+                >
+                  {changingPw ? 'Updating…' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+
+            {/* ── Danger zone — Deactivate ────────────────────────────────── */}
+            <div className="prof-settings-section danger" style={{ marginTop: 20 }}>
+              <p className="prof-settings-heading">
+                <PowerOff size={13} style={{ flexShrink: 0 }} />
+                Danger Zone
+              </p>
+
+              {confirmDeactivate ? (
                 <div className="prof-confirm-box">
                   <p className="prof-confirm-text">
-                    This will permanently delete your account and all progress. This cannot be undone.
+                    Deactivating your account will suspend your access. Your progress and data
+                    will be preserved, but you will not be able to log in until the account
+                    is reactivated. Are you sure?
                   </p>
                   <div className="prof-confirm-actions">
                     <button
-                      id="settings-confirm-delete-btn"
+                      id="settings-confirm-deactivate-btn"
                       className="prof-confirm-yes"
-                      onClick={handleDelete}
-                      disabled={deleting}
+                      onClick={handleDeactivate}
+                      disabled={deactivating}
                     >
-                      {deleting ? 'Deleting…' : 'Yes, delete'}
+                      {deactivating ? 'Deactivating…' : 'Yes, deactivate'}
                     </button>
                     <button
-                      id="settings-cancel-delete-btn"
+                      id="settings-cancel-deactivate-btn"
                       className="prof-confirm-cancel"
-                      onClick={() => setConfirmDelete(false)}
+                      onClick={() => setConfirmDeactivate(false)}
                     >
                       Cancel
                     </button>
@@ -365,12 +522,13 @@ export default function ProfileHubPage() {
                 </div>
               ) : (
                 <button
-                  id="settings-delete-btn"
+                  id="settings-deactivate-btn"
                   className="prof-delete-btn"
-                  onClick={() => setConfirmDelete(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  onClick={() => setConfirmDeactivate(true)}
                 >
-                  <Trash2 size={16} />
-                  Delete Account
+                  <PowerOff size={16} style={{ flexShrink: 0 }} />
+                  Deactivate Account
                 </button>
               )}
             </div>
@@ -379,8 +537,16 @@ export default function ProfileHubPage() {
             <button
               id="settings-back-to-profile-btn"
               className="prof-menu-row"
-              style={{ borderRadius: 18, border: '1px solid var(--line)', marginTop: 4 }}
-              onClick={() => { setConfirmDelete(false); setView('main') }}
+              style={{ borderRadius: 18, border: '1px solid var(--line)', marginTop: 16 }}
+              onClick={() => {
+                setConfirmDeactivate(false)
+                setPwErrors([])
+                setPwSuccess(false)
+                setCurrentPassword('')
+                setNewPassword('')
+                setConfirmPassword('')
+                setView('main')
+              }}
             >
               <span className="prof-menu-icon">
                 <UserRound size={18} />
@@ -450,16 +616,11 @@ export default function ProfileHubPage() {
         </div>
       </div>
 
-      {/* ── Stats row ─────────────────────────────────────────────────── */}
+      {/* ── Stats row (no points) ──────────────────────────────────────── */}
       <div className="prof-stats" role="group" aria-label="User statistics">
         <div className="prof-stat">
           <strong id="stat-stories">{completedCount}</strong>
           <span>Stories</span>
-        </div>
-        <div className="prof-stat-divider" />
-        <div className="prof-stat">
-          <strong id="stat-points">{totalPoints}</strong>
-          <span>Points</span>
         </div>
         <div className="prof-stat-divider" />
         <div className="prof-stat">

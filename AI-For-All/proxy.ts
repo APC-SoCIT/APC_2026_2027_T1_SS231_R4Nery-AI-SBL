@@ -53,6 +53,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Admin area: require a signed-in admin/facilitator (uses the normal /sign-in page)
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
+
+  if (isAdminRoute) {
+    let isAdmin = false
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      isAdmin = profile?.role === 'admin' || profile?.role === 'facilitator'
+    }
+
+    if (!isAdmin) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/sign-in'
+      redirectUrl.search = ''
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   return supabaseResponse
 }
 

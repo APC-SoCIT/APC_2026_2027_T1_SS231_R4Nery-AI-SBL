@@ -1,11 +1,10 @@
 import Link from 'next/link'
-import { Archive, Home as HomeIcon, Target, UserRound } from 'lucide-react'
+import { Archive, Home as HomeIcon, UserRound } from 'lucide-react'
 
 export type RegisteredNavKey = 'home' | 'goals' | 'archive' | 'profile'
 
 const items: { key: RegisteredNavKey; href: string; label: string; Icon: typeof HomeIcon }[] = [
   { key: 'home', href: '/home', label: 'Home', Icon: HomeIcon },
-  { key: 'goals', href: '/goals', label: 'Goal Board', Icon: Target },
   { key: 'archive', href: '/archive', label: 'Archive', Icon: Archive },
   { key: 'profile', href: '/profile', label: 'Profile', Icon: UserRound },
 ]

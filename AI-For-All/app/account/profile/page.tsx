@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, User, Mail, Shield, ChevronRight, LogOut, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, Mail, Shield, ChevronRight, LogOut, PowerOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,14 +27,24 @@ interface Profile {
   authMethod: string
 }
 
+/** Map raw DB role to a user-facing display label. */
+function getRoleLabel(role: string | undefined): string {
+  if (!role) return 'MallGoers'
+  const r = role.toLowerCase()
+  if (r === 'guest' || r === 'user' || r === 'mallgoer' || r === 'mall_goer') return 'MallGoers'
+  if (r === 'facilitator') return 'Facilitator'
+  if (r === 'admin') return 'Admin'
+  return 'MallGoers'
+}
+
 export default function AccountProfilePage() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deactivating, setDeactivating] = useState(false)
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
 
   // ── Load profile ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -87,22 +97,23 @@ export default function AccountProfilePage() {
     router.push('/get-started')
   }
 
-  // ── Delete account ────────────────────────────────────────────────────────
-  async function handleDelete() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
-    setDeleting(true)
+  // ── Deactivate account ────────────────────────────────────────────────────
+  async function handleDeactivate() {
+    setDeactivating(true)
     try {
-      const res = await fetch('/api/account', { method: 'DELETE' })
+      const res = await fetch('/api/account/deactivate', { method: 'POST' })
       if (!res.ok) {
         const d = await res.json()
-        throw new Error(d.error ?? 'Deletion failed.')
+        throw new Error(d.error ?? 'Deactivation failed.')
       }
-      toast.success('Account deleted. Goodbye!')
+      const supabase = createClient()
+      await supabase.auth.signOut({ scope: 'global' })
+      toast.success('Your account has been deactivated.')
       router.push('/get-started')
     } catch (err: any) {
       toast.error(err.message)
-      setDeleting(false)
-      setConfirmDelete(false)
+      setDeactivating(false)
+      setConfirmDeactivate(false)
     }
   }
 
@@ -140,6 +151,9 @@ export default function AccountProfilePage() {
         </div>
         <div>
           <strong>{profile?.name ?? 'No name set'}</strong>
+          <small style={{ display: 'block', color: 'var(--muted)', marginTop: 2 }}>
+            {getRoleLabel(profile?.role)}
+          </small>
           <small>{profile?.email ?? '—'}</small>
         </div>
       </div>
@@ -208,22 +222,23 @@ export default function AccountProfilePage() {
           Sign out of all devices
         </button>
 
-        {/* Danger zone — delete account */}
-        {confirmDelete ? (
+        {/* Danger zone — deactivate account */}
+        {confirmDeactivate ? (
           <div style={{ background: '#fff0ee', borderRadius: 14, padding: '14px 16px' }}>
             <p style={{ margin: '0 0 10px', fontSize: 13, color: '#c0392b', fontWeight: 700 }}>
-              This will permanently delete your account and all progress. Are you sure?
+              Your account will be deactivated and your access suspended. Your progress and
+              data will be preserved. Are you sure?
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={handleDelete}
-                disabled={deleting}
+                onClick={handleDeactivate}
+                disabled={deactivating}
                 style={{ flex: 1, minHeight: 42, borderRadius: 12, background: '#c0392b', color: '#fff', fontWeight: 700, fontSize: 13 }}
               >
-                {deleting ? 'Deleting…' : 'Yes, delete my account'}
+                {deactivating ? 'Deactivating…' : 'Yes, deactivate my account'}
               </button>
               <button
-                onClick={() => setConfirmDelete(false)}
+                onClick={() => setConfirmDeactivate(false)}
                 style={{ flex: 1, minHeight: 42, borderRadius: 12, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', fontWeight: 700, fontSize: 13 }}
               >
                 Cancel
@@ -232,11 +247,11 @@ export default function AccountProfilePage() {
           </div>
         ) : (
           <button
-            onClick={() => setConfirmDelete(true)}
+            onClick={() => setConfirmDeactivate(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 14, background: 'transparent', border: '1px solid #f0b3af', color: '#c0392b', fontWeight: 700, fontSize: 13 }}
           >
-            <Trash2 size={15} />
-            Delete account
+            <PowerOff size={15} />
+            Deactivate account
           </button>
         )}
       </div>
