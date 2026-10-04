@@ -27,7 +27,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     })()
   }, [supabase.auth, pathname])
 
-  if (pathname === '/admin' || pathname === '/admin/login') {
+  if (pathname === '/admin') {
     return <>{children}</>
   }
 

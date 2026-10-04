@@ -12,7 +12,7 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const EFFECTIVE_DATE = '[DD Month YYYY]' // TODO: set the real effective date
+const EFFECTIVE_DATE = '[24 September 2026]' // TODO: set the real effective date
 const CONTACT_EMAIL = '[team/contact email]' // TODO
 const DPO_CONTACT = '[designated contact person and email]' // TODO
 
@@ -41,12 +41,6 @@ export default function TermsPage() {
           you have read, understood, and agree to be bound by these Terms and our Privacy
           Notice. If you do not agree to these Terms, please refrain from creating an
           account or using the System.
-        </p>
-
-        <p className="terms-ai-note">
-          These Terms were generated with the assistance of AI (Claude by Anthropic),
-          guided and reviewed by the AI for ALL project team, and grounded in applicable
-          Philippine law and industry-standard practices.
         </p>
 
         <h2>1. About the System</h2>

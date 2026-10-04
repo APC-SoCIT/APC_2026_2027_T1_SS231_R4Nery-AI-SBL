@@ -63,7 +63,6 @@ function buildSession(user: User, role?: string): UserSession {
     authMethod: deriveAuthMethod(user),
     emailVerified: user.email_confirmed_at !== null && user.email_confirmed_at !== undefined,
     completedModules: [],
-    totalPoints: 0,
     unlockedBadges: [],
     claimedRewards: [],
     createdAt: new Date(user.created_at),

@@ -137,6 +137,7 @@ export default function CreateStoryWizard() {
 
     const finalStory: StoryModule = {
       ...generatedStory,
+      id: generatedStory.id || `story-${Date.now()}`,
       title: title || generatedStory.title,
       category: effectiveTopics[0],
       level,

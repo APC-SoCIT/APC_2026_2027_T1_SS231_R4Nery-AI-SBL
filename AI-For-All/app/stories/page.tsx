@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { fetchAllStories } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
+import { useSession } from '@/lib/sessionContext'
 
 const GUEST_STORY_KEY = 'ai-for-all:guest-story'
 
@@ -155,8 +156,10 @@ export default function StoriesPage() {
     router.push(`/stories/${cards[active].id}`)
   }
 
+  const { session: authSession } = useSession()
   const session = typeof window !== 'undefined' ? getMockSession() : null
-  const backHref = session ? '/home' : '/get-started'
+  const isRegistered = !!authSession && !authSession.isGuest
+  const backHref = session || isRegistered ? '/home' : '/get-started'
 
   return (
     <main className="stories-page">
