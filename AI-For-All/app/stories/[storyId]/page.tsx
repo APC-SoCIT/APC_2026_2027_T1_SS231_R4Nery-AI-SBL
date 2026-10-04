@@ -2,17 +2,20 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Sun, Lock, BookOpen, Star } from 'lucide-react'
+import { ArrowLeft, Send, Sun, Lock, BookOpen, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchStoryById } from '@/lib/supabase/stories'
 import { trackStoryPresence } from '@/lib/supabase/presence'
 import { StoryModule } from '@/lib/story-data'
 import { useSession } from '@/lib/sessionContext'
 import { SignupPrompt } from '@/components/auth/signup-prompt'
 import { StoryReaction } from '@/components/story/story-reaction'
+import toast from 'react-hot-toast'
 
 type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
 
 const PROGRESS_KEY_PREFIX = 'ai-for-all:story-progress:'
+// How long the three-dot typing indicator shows before narration/dialogue appears
+const TYPING_DELAY_MS = 700
 
 export default function StoryScenePage() {
   const params = useParams<{ storyId: string }>()
@@ -81,20 +84,30 @@ export default function StoryScenePage() {
   }, [story, params.storyId])
 
   const { session } = useSession()
-  const isGuest = !session || session.role === 'guest'
+  // Guest = no session or a Supabase anonymous user. Registered accounts are created with
+  // users.role = 'guest' by the signup trigger, so the role column can't be used here.
+  const isGuest = !session || session.isGuest
   const [showSignupPrompt, setShowSignupPrompt] = useState(false)
 
   // Save progress to the database when a registered user completes a story.
   const saveProgress = useCallback(async (storyId: string) => {
     if (isGuest) return // guests have no account to save to
     try {
-      await fetch('/api/progress', {
+      const res = await fetch('/api/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storyId }),
       })
-    } catch {
+      // fetch() does not throw on 4xx/5xx, so check the response explicitly
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        console.error('Saving story completion failed:', res.status, detail?.error)
+        toast.error("We couldn't save your progress for this story.")
+      }
+    } catch (err) {
       // Non-fatal — progress save failure should not interrupt the UX
+      console.error('Saving story completion failed:', err)
+      toast.error("We couldn't save your progress for this story.")
     }
   }, [isGuest])
 
@@ -110,6 +123,17 @@ export default function StoryScenePage() {
       saveProgress(story.id)
     }
   }, [step, isGuest, story, saveProgress])
+
+  // Typing indicator: each new narration/dialogue is "revealed" after a short delay.
+  // Until its key is revealed, the three dots show instead of the text.
+  const [revealedKey, setRevealedKey] = useState<string | null>(null)
+  const dialogueKey = `${step}:${sceneIndex}`
+  useEffect(() => {
+    if (step !== 'scene' && step !== 'gate' && step !== 'activity' && step !== 'response') return
+    const timer = window.setTimeout(() => setRevealedKey(dialogueKey), TYPING_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [step, dialogueKey])
+  const isTyping = revealedKey !== dialogueKey
 
   if (loading) {
     return (
@@ -176,28 +200,40 @@ export default function StoryScenePage() {
   if (step === 'splash') {
     return (
       <main className="story-splash-page">
-        <img src="/ai-for-all/Story-Ai-Mascot.png" alt="" className="story-splash-mascot" />
-        <div className="story-splash-card">
-          <h2>{story.title}</h2>
-          <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
-          <button
-            type="button"
-            className="stories-cta"
-            onClick={() => {
-              setSceneIndex(0)
-              setScore(0)
-              setStep('scene')
-            }}
-          >
-            Start Story
-          </button>
+        <div className="story-splash-hero">
+          <Link href="/stories" className="story-splash-back" aria-label="Back to stories">
+            <ChevronLeft size={20} />
+          </Link>
+          <h2 className="story-splash-title">{story.title}</h2>
+          <span className="story-splash-spark story-splash-spark--1" aria-hidden="true">◆</span>
+          <span className="story-splash-spark story-splash-spark--2" aria-hidden="true">●</span>
+          <span className="story-splash-spark story-splash-spark--3" aria-hidden="true">●</span>
+          <span className="story-splash-spark story-splash-spark--4" aria-hidden="true">◆</span>
+          <img src="/ai-for-all/Mascot-look-down.png" alt="" className="story-splash-mascot" />
         </div>
+        <div className="story-splash-card">
+          <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
+        </div>
+        <button
+          type="button"
+          className="stories-cta story-splash-start"
+          onClick={() => {
+            setSceneIndex(0)
+            setScore(0)
+            setStep('scene')
+          }}
+        >
+          Start Story
+          <span className="story-splash-start-arrow" aria-hidden="true">
+            <ChevronRight size={20} />
+          </span>
+        </button>
       </main>
     )
   }
 
   return (
-    <main className="story-scene-page">
+    <main className="story-scene-page story-session-layout">
       <div className="story-scene-header">
         <button type="button" onClick={() => router.push('/stories')} aria-label="Exit story">
           <ArrowLeft size={18} />
@@ -209,11 +245,17 @@ export default function StoryScenePage() {
           src="/ai-for-all/Story-Ai-Mascot.png"
           alt=""
           aria-hidden="true"
-          style={{ width: 140, margin: '-22px 0 -24px', objectFit: 'contain', pointerEvents: 'none' }}
+          style={{ width: 'clamp(150px, min(60vw, 32vh), 320px)', height: 'auto', margin: 'calc(clamp(150px, min(60vw, 32vh), 320px) * -0.157) 0 calc(clamp(150px, min(60vw, 32vh), 320px) * -0.171)', objectFit: 'contain', pointerEvents: 'none' }}
         />
-        {step === 'scene' && <span className="story-scene-dots">•••</span>}
+        {isTyping && (
+          <span className="story-scene-dots story-typing-indicator" role="status" aria-label="Typing">
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
       </div>
-      {step === 'scene' && currentScene && (
+      {step === 'scene' && currentScene && !isTyping && (
         <>
           <div className="story-scene-bubble">{currentScene.body}</div>
           <div className="story-scene-choices">
@@ -230,7 +272,7 @@ export default function StoryScenePage() {
           </div>
         </>
       )}
-      {step === 'gate' && (
+      {step === 'gate' && !isTyping && (
         <>
           <div className="story-scene-bubble">
             This story ends with a free-text activity for registered learners. Sign up to unlock it — or skip
@@ -246,7 +288,7 @@ export default function StoryScenePage() {
           </div>
         </>
       )}
-      {step === 'activity' && (
+      {step === 'activity' && !isTyping && (
         <form className="story-activity" onSubmit={submitActivity}>
           <div className="story-scene-bubble">{activityPrompt || 'Try to prompt'}</div>
           <div className="story-activity-row">
@@ -262,7 +304,7 @@ export default function StoryScenePage() {
           </div>
         </form>
       )}
-      {step === 'response' && (
+      {step === 'response' && !isTyping && (
         <>
           <div className="story-scene-bubble">
             AI is like a little mind that watches, learns, and gets better each time you show it something new.

@@ -4,8 +4,13 @@
  * GET  /api/progress  — Fetch the current user's progress (completed stories, points).
  * POST /api/progress  — Mark a story as completed for the current user.
  *
- * Uses the `user_progress` table which has RLS policies ensuring each user
- * can only read and write their own row.
+ * Uses the project's existing `mall_goers` + `progress` tables (there is no
+ * `user_progress` table in the live database). Mapping:
+ *   auth.users.id -> users.auth_user_id -> users.user_id
+ *   -> mall_goers.users_user_id -> mall_goers.mall_goer_id
+ *   -> progress.participant_id   (one row per story, status = 'completed')
+ *   stories.id -> progress.story_id
+ * RLS policies restrict every row to the signed-in user (see Supabase SQL fix).
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
@@ -31,6 +36,61 @@ async function buildServerClient() {
   )
 }
 
+// Resolve the signed-in auth user to their mall_goers row (optionally creating it).
+// users.user_id is NOT always equal to auth.users.id in this database, so the
+// lookup goes through users.auth_user_id.
+async function getMallGoer(
+  supabase: Awaited<ReturnType<typeof buildServerClient>>,
+  authUserId: string,
+  createIfMissing: boolean,
+): Promise<{ mallGoer: { mall_goer_id: string; points: number | null } | null; error?: string }> {
+  const { data: userRow, error: userErr } = await supabase
+    .from('users')
+    .select('user_id')
+    .eq('auth_user_id', authUserId)
+    .maybeSingle()
+  if (userErr) return { mallGoer: null, error: userErr.message }
+  if (!userRow) return { mallGoer: null, error: createIfMissing ? 'No users row found for this account.' : undefined }
+
+  const { data: mallGoer, error: mgErr } = await supabase
+    .from('mall_goers')
+    .select('mall_goer_id, points')
+    .eq('users_user_id', userRow.user_id)
+    .maybeSingle()
+  if (mgErr) return { mallGoer: null, error: mgErr.message }
+  if (mallGoer || !createIfMissing) return { mallGoer }
+
+  const { data: created, error: insErr } = await supabase
+    .from('mall_goers')
+    .insert({ users_user_id: userRow.user_id, is_guest: false })
+    .select('mall_goer_id, points')
+    .single()
+  if (insErr) return { mallGoer: null, error: insErr.message }
+  return { mallGoer: created }
+}
+
+// Completed story ids (and when each was completed) for a mall goer.
+async function getCompleted(
+  supabase: Awaited<ReturnType<typeof buildServerClient>>,
+  mallGoerId: string,
+): Promise<{ ids: string[]; dates: Record<string, string>; error?: string }> {
+  const { data, error } = await supabase
+    .from('progress')
+    .select('story_id, date_updated')
+    .eq('participant_id', mallGoerId)
+    .eq('status', 'completed')
+    .order('date_updated', { ascending: true })
+  if (error) return { ids: [], dates: {}, error: error.message }
+  const ids: string[] = []
+  const dates: Record<string, string> = {}
+  for (const row of data ?? []) {
+    if (!row.story_id) continue
+    ids.push(row.story_id)
+    dates[row.story_id] = row.date_updated
+  }
+  return { ids, dates }
+}
+
 // ─── GET /api/progress ────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -41,21 +101,26 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: progress, error } = await supabase
-    .from('user_progress')
-    .select('completed_modules, total_points, unlocked_badges')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  const { mallGoer, error: mgError } = await getMallGoer(supabase, user.id, false)
+  if (mgError) {
+    return NextResponse.json({ error: mgError }, { status: 500 })
   }
 
-  // If no row yet (new user), return empty defaults
+  // If no mall_goers row yet (new user), return empty defaults
+  if (!mallGoer) {
+    return NextResponse.json({ completedModules: [], completedDates: {}, totalPoints: 0, unlockedBadges: [] })
+  }
+
+  const completed = await getCompleted(supabase, mallGoer.mall_goer_id)
+  if (completed.error) {
+    return NextResponse.json({ error: completed.error }, { status: 500 })
+  }
+
   return NextResponse.json({
-    completedModules: progress?.completed_modules ?? [],
-    totalPoints: progress?.total_points ?? 0,
-    unlockedBadges: progress?.unlocked_badges ?? [],
+    completedModules: completed.ids,
+    completedDates: completed.dates,
+    totalPoints: mallGoer.points ?? 0,
+    unlockedBadges: [],
   })
 }
 
@@ -76,45 +141,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'storyId is required.' }, { status: 400 })
   }
 
-  // Fetch the existing progress row (if any)
-  const { data: existing } = await supabase
-    .from('user_progress')
-    .select('completed_modules, total_points')
-    .eq('user_id', user.id)
+  const { mallGoer, error: mgError } = await getMallGoer(supabase, user.id, true)
+  if (mgError || !mallGoer) {
+    return NextResponse.json({ error: mgError ?? 'Could not resolve mall goer.' }, { status: 500 })
+  }
+
+  // Fetch the existing progress row for this story (if any)
+  const { data: existing, error: existingErr } = await supabase
+    .from('progress')
+    .select('status')
+    .eq('participant_id', mallGoer.mall_goer_id)
+    .eq('story_id', storyId)
     .maybeSingle()
+  if (existingErr) {
+    return NextResponse.json({ error: existingErr.message }, { status: 500 })
+  }
 
-  const currentModules: string[] = existing?.completed_modules ?? []
-  const currentPoints: number = existing?.total_points ?? 0
+  // Only award points the first time the story is completed (avoid duplicates)
+  const alreadyCompleted = existing?.status === 'completed'
 
-  // Only add the story if not already completed (avoid duplicates)
-  const alreadyCompleted = currentModules.includes(storyId)
-  const updatedModules = alreadyCompleted
-    ? currentModules
-    : [...currentModules, storyId]
-  const updatedPoints = alreadyCompleted ? currentPoints : currentPoints + 10
-
-  // Upsert the user_progress row
-  const { data: updated, error: upsertErr } = await supabase
-    .from('user_progress')
+  // One row per (story_id, participant_id), matching the table's unique constraint
+  const { error: upsertErr } = await supabase
+    .from('progress')
     .upsert(
       {
-        user_id: user.id,
-        completed_modules: updatedModules,
-        total_points: updatedPoints,
-        updated_at: new Date().toISOString(),
+        story_id: storyId,
+        participant_id: mallGoer.mall_goer_id,
+        status: 'completed',
+        date_updated: new Date().toISOString(),
       },
-      { onConflict: 'user_id' }
+      { onConflict: 'story_id,participant_id' }
     )
-    .select('completed_modules, total_points')
-    .single()
 
   if (upsertErr) {
     return NextResponse.json({ error: upsertErr.message }, { status: 500 })
   }
 
+  const currentPoints: number = mallGoer.points ?? 0
+  const updatedPoints = alreadyCompleted ? currentPoints : currentPoints + 10
+  if (!alreadyCompleted) {
+    const { error: pointsErr } = await supabase
+      .from('mall_goers')
+      .update({ points: updatedPoints, updated_at: new Date().toISOString() })
+      .eq('mall_goer_id', mallGoer.mall_goer_id)
+    if (pointsErr) {
+      return NextResponse.json({ error: pointsErr.message }, { status: 500 })
+    }
+  }
+
+  const completed = await getCompleted(supabase, mallGoer.mall_goer_id)
+
   return NextResponse.json({
-    completedModules: updated.completed_modules,
-    totalPoints: updated.total_points,
+    completedModules: completed.ids,
+    totalPoints: updatedPoints,
     alreadyCompleted,
   })
 }
