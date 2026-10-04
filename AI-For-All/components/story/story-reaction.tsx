@@ -7,11 +7,12 @@
  * app/stories/[storyId]/page.tsx as the 'reaction' step, right after the
  * learner finishes the last story step and before the Story Cleared screen.
  *
- * Every learner's reaction is saved through POST /api/reactions (one row per
- * learner + story; reacting again updates it), so the counts include guests:
- *   - Registered users and Supabase anonymous guests: identified by their session.
- *   - Guests with no session at all: identified by a random guestId kept in
- *     localStorage (see getGuestId), so a returning guest updates their own row.
+ * Every reaction is sent to POST /api/reactions, so the totals include guests:
+ *   - Registered learners: saved as their own row (one per user + story;
+ *     reacting again updates it), so facilitators can see who reacted.
+ *   - Guests: only added to an anonymous per-story tally. The browser remembers
+ *     the guest's last pick (see GUEST_REACTION_KEY) so changing it moves the
+ *     count instead of adding a second one.
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -30,19 +31,23 @@ interface StoryReactionProps {
 
 type Destination = 'continue' | 'stories'
 
-const GUEST_ID_KEY = 'ai-for-all:guest-id'
+const GUEST_REACTION_KEY = 'ai-for-all:guest-reaction:'
 
-/** Stable random id for this browser, used only when there is no Supabase session. */
-function getGuestId(): string | null {
+/** The reaction this browser last sent for a story as a guest (nothing is stored server-side). */
+function readGuestReaction(storyId: string): StoryReactionValue | null {
   try {
-    let id = localStorage.getItem(GUEST_ID_KEY)
-    if (!id) {
-      id = crypto.randomUUID()
-      localStorage.setItem(GUEST_ID_KEY, id)
-    }
-    return id
+    const value = localStorage.getItem(GUEST_REACTION_KEY + storyId)
+    return isStoryReactionValue(value) ? value : null
   } catch {
-    return null // localStorage or crypto unavailable; the server will reject the save
+    return null
+  }
+}
+
+function writeGuestReaction(storyId: string, value: StoryReactionValue) {
+  try {
+    localStorage.setItem(GUEST_REACTION_KEY + storyId, value)
+  } catch {
+    // localStorage unavailable: a later change would count as a new reaction
   }
 }
 
@@ -53,12 +58,15 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
 
   // Pre-select the learner's previous reaction to this story, if any.
   useEffect(() => {
+    if (isGuest) {
+      const previous = readGuestReaction(story.id)
+      if (previous) setSelected((current) => current ?? previous)
+      return
+    }
     let cancelled = false
     ;(async () => {
       try {
-        const guestId = isGuest ? getGuestId() : null
-        const guestParam = guestId ? `&guestId=${encodeURIComponent(guestId)}` : ''
-        const res = await fetch(`/api/reactions?storyId=${encodeURIComponent(story.id)}${guestParam}`)
+        const res = await fetch(`/api/reactions?storyId=${encodeURIComponent(story.id)}`)
         if (!res.ok) return
         const data = await res.json()
         if (!cancelled && isStoryReactionValue(data.reaction)) {
@@ -80,14 +88,17 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
   async function saveReaction(): Promise<'saved' | 'skipped' | 'failed'> {
     if (!selected) return 'skipped'
     try {
-      // guestId is ignored by the server whenever a session (registered or anonymous) exists
-      const guestId = isGuest ? getGuestId() : null
+      // Guests send their previous pick so the server moves the count instead of adding one
+      const previousReaction = isGuest ? readGuestReaction(story.id) : null
       const res = await fetch('/api/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId: story.id, reaction: selected, guestId }),
+        body: JSON.stringify({ storyId: story.id, reaction: selected, previousReaction }),
       })
-      if (res.ok) return 'saved'
+      if (res.ok) {
+        if (isGuest) writeGuestReaction(story.id, selected)
+        return 'saved'
+      }
       if (res.status === 429) {
         // Guest rate limit: never trap a real learner on this screen
         const data = await res.json().catch(() => ({}))
