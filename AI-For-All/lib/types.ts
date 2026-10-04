@@ -33,14 +33,13 @@ export interface UserSession {
   sessionId: string
   userId: string
   isGuest: boolean
-  role: 'guest' | 'user' | 'facilitator' | 'admin'
+  role: 'guest' | 'user' | 'facilitator' | 'admin' | 'deactivated'
   authMethod: 'email' | 'google' | null
   emailVerified: boolean
   selectedPath?: AIPath
   selectedPersona?: Persona
   completedModules: string[]
   currentProgress?: SessionProgress
-  totalPoints: number
   unlockedBadges: Badge[]
   claimedRewards: string[]
   createdAt: Date

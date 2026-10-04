@@ -108,7 +108,7 @@ export async function GET() {
 
   // If no mall_goers row yet (new user), return empty defaults
   if (!mallGoer) {
-    return NextResponse.json({ completedModules: [], completedDates: {}, totalPoints: 0, unlockedBadges: [] })
+    return NextResponse.json({ completedModules: [], completedDates: {}, unlockedBadges: [] })
   }
 
   const completed = await getCompleted(supabase, mallGoer.mall_goer_id)
@@ -119,7 +119,6 @@ export async function GET() {
   return NextResponse.json({
     completedModules: completed.ids,
     completedDates: completed.dates,
-    totalPoints: mallGoer.points ?? 0,
     unlockedBadges: [],
   })
 }
@@ -157,7 +156,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: existingErr.message }, { status: 500 })
   }
 
-  // Only award points the first time the story is completed (avoid duplicates)
+  // Only allow one progress row per (story_id, participant_id).
   const alreadyCompleted = existing?.status === 'completed'
 
   // One row per (story_id, participant_id), matching the table's unique constraint
@@ -177,23 +176,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: upsertErr.message }, { status: 500 })
   }
 
-  const currentPoints: number = mallGoer.points ?? 0
-  const updatedPoints = alreadyCompleted ? currentPoints : currentPoints + 10
-  if (!alreadyCompleted) {
-    const { error: pointsErr } = await supabase
-      .from('mall_goers')
-      .update({ points: updatedPoints, updated_at: new Date().toISOString() })
-      .eq('mall_goer_id', mallGoer.mall_goer_id)
-    if (pointsErr) {
-      return NextResponse.json({ error: pointsErr.message }, { status: 500 })
-    }
-  }
-
   const completed = await getCompleted(supabase, mallGoer.mall_goer_id)
 
   return NextResponse.json({
     completedModules: completed.ids,
-    totalPoints: updatedPoints,
     alreadyCompleted,
   })
 }

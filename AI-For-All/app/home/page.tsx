@@ -15,7 +15,6 @@ const SNAP_ORDER: Snap[] = ['hero', 'default', 'expanded']
 
 interface UserProgress {
   completedModules: string[]
-  totalPoints: number
 }
 
 interface StoryInfo {
@@ -256,7 +255,7 @@ export default function HomePage() {
             </p>
           )}
 
-          {/* Stats — real per-user data */}
+          {/* Stats — real per-user data (points removed) */}
           <div className="home-stats">
             <div className="home-stat home-stat-purple">
               <strong>{progressLoading ? '…' : completedCount}</strong>
@@ -267,14 +266,6 @@ export default function HomePage() {
               <strong>{progressLoading ? '…' : Math.max(0, totalStories - completedCount)}</strong>
               <span>Remaining</span>
               <small>Stories left</small>
-            </div>
-            <div className="home-stat home-stat-blue">
-              <strong>
-                {progressLoading ? '…' : (progress?.totalPoints ?? 0)}
-                <span className="unit">pts</span>
-              </strong>
-              <span>Points</span>
-              <small>Keep learning!</small>
             </div>
           </div>
 
