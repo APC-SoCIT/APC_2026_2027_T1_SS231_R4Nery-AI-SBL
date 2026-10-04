@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
   try {
     await admin
       .from('users')
-      .update({ role: 'deactivated' } as any)
+      // @ts-ignore: untyped client update signature complains about never
+      .update({ role: 'deactivated' })
       .eq('user_id', user.id)
   } catch {
     // Non-fatal if the column doesn't support this value — we still ban via Auth.
