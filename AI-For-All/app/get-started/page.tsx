@@ -71,6 +71,7 @@ export default function GetStartedPage() {
   return (
     <main className="getstarted-page">
       <div className="getstarted-content">
+        <img className="getstarted-logo" src="/APC Logo.png" alt="Asia Pacific College" />
         <h2>
           Let&apos;s get
           <br />

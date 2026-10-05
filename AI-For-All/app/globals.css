@@ -4873,3 +4873,105 @@ a.admin-primary {
     padding: 24px 20px;
   }
 }
+
+/* Get Started Responsive Branding */
+
+/* Portrait / phone (default): logo above the content, everything centered, group sits slightly lower */
+.getstarted-content { width:100%; max-width:440px; margin:0 auto; padding-top:clamp(64px, 11vh, 112px); text-align:center; }
+.getstarted-content > p:first-of-type { margin-left:auto; margin-right:auto; }
+.getstarted-content .getstarted-logo { display:block; width:clamp(72px, min(24vw, 12vh), 112px); max-width:100%; height:auto; margin:0 auto clamp(16px, 3vh, 28px); object-fit:contain; }
+
+/* Get Started Portrait Tablet and Landscape Adjustment */
+
+/* Landscape only (phone landscape, iPad/tablet landscape, laptop, desktop).
+   Portrait phones AND portrait tablets/iPads no longer match, so both use the original centered portrait rules above. */
+@media (orientation: landscape) and (min-width: 560px) {
+  .getstarted-content { display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:clamp(16px, 3vw, 32px); align-items:start; max-width:480px; padding-top:clamp(24px, 7vh, 72px); text-align:left; }
+  .getstarted-content > * { grid-column:1 / -1; }
+  /* Upper section: title (row 1) + subtitle (row 2) on the left, logo on the right spanning both rows */
+  .getstarted-content > h2 { grid-column:1; grid-row:1; }
+  .getstarted-content > p:first-of-type { grid-column:1; grid-row:2; margin-left:0; margin-right:0; margin-bottom:clamp(36px, 7vh, 56px); }
+  /* Logo bounded by the title + subtitle height; same bottom margin as the subtitle so it centers on the text, not the gap */
+  .getstarted-content > .getstarted-logo { grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:end; width:clamp(80px, min(12vw, 24vh), 128px); max-width:none; margin:0 0 clamp(36px, 7vh, 56px); }
+}
+
+/* Get Started Horizontal Alignment Adjustment */
+
+/* Landscape only. Portrait phones and portrait tablets/iPads do not match, so they stay exactly as they are. */
+@media (orientation: landscape) and (min-width: 560px) {
+
+  /* Buttons and lower options keep their current 424px width, centered under the upper section */
+  .getstarted-content > .getstarted-primary,
+  .getstarted-content > .getstarted-secondary,
+  .getstarted-content > .getstarted-guest,
+  .getstarted-content > .getstarted-a11y { width:100%; max-width:424px; justify-self:center; }
+  /* Lower group moves slightly down; logo uses the same bottom margin so it stays centered on title + subtitle */
+  .getstarted-content > p:first-of-type { margin-bottom:clamp(48px, 10vh, 80px); }
+  .getstarted-content > .getstarted-logo { margin-bottom:clamp(48px, 10vh, 80px); }
+}
+
+/* Sign Up, Story Colors, Archive, and Congratulations UI Updates */
+
+/* Sign Up: Google button removed; keep the small gap above the terms that its row used to provide */
+.authpage-signup .authpage-terms { margin-top:6px; }
+
+/* Archive: full folder cards. Same notched top and same 28px overlap; each card simply extends downward */
+.archive-stack-list { position:relative; }
+.archive-stack-card { flex-shrink:0; min-height:clamp(128px, 18vh, 168px); }
+
+/* Archive with 1 or 2 stories: taller folders, stack centered in the free area */
+.archive-stack-list--few { margin:auto; width:100%; max-width:480px; }
+.archive-stack-list--few .archive-stack-card { min-height:clamp(160px, 28vh, 260px); }
+
+/* Archive with 3+ stories: the stack becomes its own vertical scroll area between the header and the navbar.
+   Only on screens tall enough for it; short landscape phones keep normal page scrolling. */
+@media (min-height: 560px) {
+  .archive-page--stack-scroll { height:100dvh; }
+  .archive-page--stack-scroll .archive-body { min-height:0; }
+  .archive-stack-list--scroll { flex:0 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-left:-8px; margin-right:-8px; padding:16px 8px 20px; cursor:grab; user-select:none; -webkit-user-select:none;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 20px), transparent 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 20px), transparent 100%); }
+  .archive-stack-list--scroll::-webkit-scrollbar { display:none; }
+  .archive-stack-list--scroll.is-dragging { cursor:grabbing; }
+  /* Wheel feel: cards away from the middle shrink up to 5%; the open card stays full size */
+  .archive-stack-list--scroll .archive-stack-card { transform:scale(calc(1 - var(--wheel, 0) * .05)); will-change:transform; }
+  .archive-stack-list--scroll .archive-stack-card.expanded { transform:none; }
+}
+@media (prefers-reduced-motion:reduce) { .archive-stack-list--scroll .archive-stack-card { transform:none; } }
+
+/* Congratulations and Archive Screenshot Fixes */
+
+/* Story Cleared action rows (Guest + Registered): icon beside its text, button below at its original full width */
+.story-cleared-card .story-cleared-cta-row { display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; column-gap:12px; row-gap:12px; }
+.story-cleared-card .story-cleared-cta-row > .story-cleared-btn { grid-column:1 / -1; }
+
+/* Archive: wider stack (header widens too so the search bar stays aligned with the cards) */
+.archive-header, .archive-body { max-width:680px; }
+/* More breathing room between Search/Filter and the stack */
+.archive-body { padding-top:clamp(32px, 7vh, 64px); }
+/* Stack sits lower: about 20px of clear space above the fixed navbar (nav is 16px from the bottom, about 60px tall) */
+.archive-page { padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* Archive: taller collapsed folder cards (shape, overlap, colors and expansion unchanged) */
+.archive-stack-card { min-height:clamp(150px, 21vh, 200px); }
+/* 1 or 2 stories: larger folders, still centered between the search and the navbar */
+.archive-stack-list--few .archive-stack-card { min-height:clamp(190px, 30vh, 280px); }
+
+/* Many stories (scroll mode): less bottom padding and a shorter bottom fade so the stack reaches lower */
+@media (min-height: 560px) {
+  .archive-stack-list--scroll { padding-bottom:8px;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%); }
+}
+
+/* Archive Folder Opening Animation Fix */
+
+/* Opening lift: the selected folder moves slightly up from its normal stack position and eases back on close.
+   Uses the separate `translate` property so the scroll-linked wheel `transform` (scale) stays instant.
+   Visual offset only: the card stays in normal flow, never fixed or sticky, and scrolls with the stack. */
+.archive-stack-card { translate:0 0; transition:translate .32s cubic-bezier(.2, .8, .2, 1); }
+.archive-stack-card.expanded { translate:0 calc(-1 * clamp(6px, 1.2vh, 10px)); }
+
+@media (prefers-reduced-motion:reduce) {
+  .archive-stack-card { transition:none; }
+}
