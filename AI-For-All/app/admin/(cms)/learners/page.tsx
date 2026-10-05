@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
 // ── Types ─────────────────────────────────────────────────────────────────
-type Role = 'guest' | 'registered' | 'admin'
+type Role = 'mallgoer' | 'deactivated' | 'admin'
 type SortKey = 'name-asc' | 'name-desc' | 'role' | 'joined-newest' | 'joined-oldest'
 
 interface Learner {
@@ -25,13 +25,13 @@ interface Learner {
 const LEARNERS_PER_PAGE = 12
 
 const ROLE_LABELS: Record<Role, string> = {
-  guest: 'Guest',
-  registered: 'Registered',
+  mallgoer: 'Learner',
+  deactivated: 'Deactivated',
   admin: 'Admin',
 }
 const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
-  guest: { bg: '#f1f5f9', color: '#64748b' },
-  registered: { bg: '#e8faf0', color: '#1a7a45' },
+  mallgoer: { bg: '#e8faf0', color: '#1a7a45' },
+  deactivated: { bg: '#f1f5f9', color: '#64748b' },
   admin: { bg: '#ece9ff', color: '#6d5fbc' },
 }
 
@@ -41,8 +41,7 @@ function LearnerRow({ learner }: { learner: Learner }) {
   const joined = learner.created_at
     ? new Date(learner.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
     : '—'
-  const rc = ROLE_COLORS[learner.role] ?? ROLE_COLORS.guest
-
+  const rc = ROLE_COLORS[learner.role] ?? ROLE_COLORS.mallgoer
   return (
     <div className="lr-row">
       {/* Avatar */}
@@ -54,7 +53,7 @@ function LearnerRow({ learner }: { learner: Learner }) {
       </div>
       {/* Role badge */}
       <span className="lr-role-badge" style={{ background: rc.bg, color: rc.color }}>
-        {learner.role === 'admin' ? <Shield size={11} /> : learner.role === 'registered' ? <UserCircle size={11} /> : <Circle size={11} />}
+        {learner.role === 'admin' ? <Shield size={11} /> : learner.role === 'mallgoer' ? <UserCircle size={11} /> : <Circle size={11} />}
         {ROLE_LABELS[learner.role]}
       </span>
       {/* Joined */}
@@ -105,7 +104,7 @@ function FilterDropdown({ sort, setSort, roleFilter, setRoleFilter }: {
           <div className="lr-filter-divider" />
           <div className="lr-filter-section">
             <label className="lr-filter-label">Role</label>
-            {(['All', 'guest', 'registered', 'admin']).map(v => (
+            {(['All', 'mallgoer', 'deactivated']).map(v => (
               <button key={v} className={`lr-filter-opt${roleFilter === v ? ' active' : ''}`} onClick={() => { setRoleFilter(v) }}>
                 {roleFilter === v && <Check size={12} />}
                 {v === 'All' ? 'All Roles' : ROLE_LABELS[v as Role]}
@@ -141,6 +140,7 @@ export default function AdminLearnersPage() {
     const { data, error } = await supabase
       .from('users')
       .select('user_id, username, user_sname, email, role, created_at')
+      .neq('role', 'admin')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -185,9 +185,8 @@ export default function AdminLearnersPage() {
 
   const stats = useMemo(() => ({
     total: learners.length,
-    registered: learners.filter(l => l.role === 'registered').length,
-    guests: learners.filter(l => l.role === 'guest').length,
-    admins: learners.filter(l => l.role === 'admin').length,
+    learnersCount: learners.filter(l => l.role === 'mallgoer').length,
+    deactivatedCount: learners.filter(l => l.role === 'deactivated').length,
   }), [learners])
 
   return (
@@ -201,18 +200,13 @@ export default function AdminLearnersPage() {
         </div>
         <div className="lr-stat-card">
           <UserCircle size={18} style={{ color: '#1a7a45' }} />
-          <strong>{stats.registered}</strong>
-          <span>Registered</span>
+          <strong>{stats.learnersCount}</strong>
+          <span>Learners</span>
         </div>
         <div className="lr-stat-card">
           <Circle size={18} style={{ color: '#64748b' }} />
-          <strong>{stats.guests}</strong>
-          <span>Guests</span>
-        </div>
-        <div className="lr-stat-card">
-          <Shield size={18} style={{ color: '#6d5fbc' }} />
-          <strong>{stats.admins}</strong>
-          <span>Admins</span>
+          <strong>{stats.deactivatedCount}</strong>
+          <span>Deactivated</span>
         </div>
       </div>
 
