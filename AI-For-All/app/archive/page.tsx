@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, SlidersHorizontal, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useSession } from '@/lib/sessionContext'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
 import { createClient } from '@/lib/supabase/client'
+import { FALLBACK_COLORS } from '@/app/stories/page'
 
 interface ArchivedStory {
   id: string
@@ -37,6 +38,73 @@ export default function ArchivePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [filterLevel, setFilterLevel] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const wheelRafRef = useRef<number | null>(null)
+  const dragRef = useRef<{ startY: number; startScroll: number; pointerId: number } | null>(null)
+  const dragMovedRef = useRef(false)
+
+  // ── Wheel-like stack: cards farther from the middle of the scroll area shrink slightly ──
+  function updateWheel() {
+    const list = listRef.current
+    if (!list) return
+    const scrollable = list.scrollHeight > list.clientHeight + 1
+    const center = list.scrollTop + list.clientHeight / 2
+    const half = Math.max(1, list.clientHeight / 2)
+    Array.from(list.children).forEach((child) => {
+      const el = child as HTMLElement
+      const mid = el.offsetTop + el.offsetHeight / 2
+      const d = scrollable ? Math.min(1, Math.abs(mid - center) / half) : 0
+      el.style.setProperty('--wheel', d.toFixed(3))
+    })
+  }
+
+  function onListScroll() {
+    if (wheelRafRef.current !== null) return
+    wheelRafRef.current = requestAnimationFrame(() => {
+      wheelRafRef.current = null
+      updateWheel()
+    })
+  }
+
+  // ── Mouse drag to browse the stack (touch uses native swipe scrolling) ────
+  function onListPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    dragMovedRef.current = false
+    const list = listRef.current
+    if (!list || e.pointerType !== 'mouse' || e.button !== 0) return
+    dragRef.current = { startY: e.clientY, startScroll: list.scrollTop, pointerId: e.pointerId }
+  }
+
+  function onListPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current
+    const list = listRef.current
+    if (!drag || !list) return
+    const dy = e.clientY - drag.startY
+    if (!dragMovedRef.current) {
+      if (Math.abs(dy) < 5) return
+      dragMovedRef.current = true
+      list.setPointerCapture(drag.pointerId)
+      list.classList.add('is-dragging')
+    }
+    list.scrollTop = drag.startScroll - dy
+  }
+
+  function onListPointerUp() {
+    dragRef.current = null
+    listRef.current?.classList.remove('is-dragging')
+  }
+
+  useEffect(() => {
+    updateWheel()
+    window.addEventListener('resize', updateWheel)
+    return () => window.removeEventListener('resize', updateWheel)
+  }, [stories, search, filterLevel, expandedId, loading])
+
+  // Keep a newly expanded card's details in view inside the scrollable stack
+  useEffect(() => {
+    if (!expandedId) return
+    const el = listRef.current?.querySelector('.archive-stack-card.expanded') as HTMLElement | null
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [expandedId])
 
   // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -100,9 +168,11 @@ export default function ArchivePage() {
   })
 
   const levels = Array.from(new Set(stories.map((s) => s.level).filter(Boolean)))
+  // 1 or 2 stories: taller, centered folders. 3+: scrollable wheel-like stack.
+  const fewStories = filtered.length <= 2
 
   return (
-    <main className="archive-page">
+    <main className={`archive-page${!loading && !fewStories ? ' archive-page--stack-scroll' : ''}`}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="archive-header">
         <h1 className="archive-title">My Archive</h1>
@@ -173,9 +243,18 @@ export default function ArchivePage() {
             )}
           </div>
         ) : (
-          <div className="archive-stack-list">
+          <div
+            ref={listRef}
+            className={`archive-stack-list${fewStories ? ' archive-stack-list--few' : ' archive-stack-list--scroll'}`}
+            onScroll={onListScroll}
+            onPointerDown={onListPointerDown}
+            onPointerMove={onListPointerMove}
+            onPointerUp={onListPointerUp}
+            onPointerCancel={onListPointerUp}
+          >
             {filtered.map((story, i) => {
-              const bg = story.color
+              // Same repeating palette as Select Story, by position, so neighbouring cards always differ
+              const bg = FALLBACK_COLORS[i % FALLBACK_COLORS.length]
               const tc = textColorFor(bg)
               const isExpanded = expandedId === story.id
 
@@ -189,7 +268,11 @@ export default function ArchivePage() {
                     // Later cards sit on top of earlier ones so each bookmark's notched top overlaps the card above
                     zIndex: i + 1,
                   } as React.CSSProperties}
-                  onClick={() => setExpandedId(isExpanded ? null : story.id)}
+                  onClick={() => {
+                    // Ignore the click that ends a mouse drag through the stack
+                    if (dragMovedRef.current) return
+                    setExpandedId(isExpanded ? null : story.id)
+                  }}
                   role="button"
                   tabIndex={0}
                   aria-expanded={isExpanded}

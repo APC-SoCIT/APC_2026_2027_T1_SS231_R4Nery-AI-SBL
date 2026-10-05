@@ -4,13 +4,11 @@
  * app/sign-up/page.tsx
  *
  * Auth method: email + password.
- * Google OAuth remains available as an alternative one-tap sign-up.
  */
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
-import { GoogleIcon } from '@/components/auth/social-icons'
 import { createClient } from '@/lib/supabase/client'
 import { mockSignUp, shouldUseMockAuth } from '@/lib/mock-auth'
 import { PENDING_STORY_KEY } from '@/app/stories/[storyId]/page'
@@ -156,17 +154,6 @@ export default function SignUpPage() {
     }
   }
 
-  async function handleGoogle() {
-    if (!SUPABASE_CONFIGURED) return
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-  }
-
   return (
     <main className="authpage authpage-signup">
       <AuthMascotHeader backHref="/get-started" variant="signup" />
@@ -245,16 +232,6 @@ export default function SignUpPage() {
             {error}
           </p>
         )}
-
-        <div className="authpage-socials">
-          <button
-            type="button"
-            className="authpage-social authpage-social-google"
-            onClick={handleGoogle}
-          >
-            <GoogleIcon /> Continue with Google
-          </button>
-        </div>
 
         <div className="authpage-terms">
           <input
