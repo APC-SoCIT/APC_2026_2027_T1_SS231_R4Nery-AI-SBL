@@ -18,7 +18,9 @@ const FALLBACK_MASCOTS = [
   '/ai-for-all/Story-Page-Mascot-2.png',
   '/ai-for-all/Story-Page-Mascot-3.png',
 ]
-const FALLBACK_COLORS = ['#6f8ce8', '#ff7a45', '#66cf9e', '#8dcdf4', '#c8ccff']
+// Story card palette, assigned by card position so neighbouring cards never share a colour.
+// Also used by the Archive page (app/archive/page.tsx) so both pages follow the same sequence.
+export const FALLBACK_COLORS = ['#6f8ce8', '#ff7a45', '#66cf9e', '#8dcdf4', '#c8ccff']
 
 type StoryCard = {
   id: string
@@ -39,7 +41,7 @@ function toCard(story: StoryModule, index: number): StoryCard {
   return {
     id: story.id,
     title: story.title,
-    color: story.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+    color: FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     bullets: bullets.length > 0 ? bullets : [story.description || story.category],
     mascot: FALLBACK_MASCOTS[index % FALLBACK_MASCOTS.length],
   }
