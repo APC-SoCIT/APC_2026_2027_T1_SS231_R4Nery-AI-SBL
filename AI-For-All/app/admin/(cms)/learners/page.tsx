@@ -52,10 +52,12 @@ function LearnerRow({ learner }: { learner: Learner }) {
         {learner.email && <small><Mail size={11} style={{ marginRight: 3 }} />{learner.email}</small>}
       </div>
       {/* Role badge */}
-      <span className="lr-role-badge" style={{ background: rc.bg, color: rc.color }}>
-        {learner.role === 'admin' ? <Shield size={11} /> : learner.role === 'mallgoer' ? <UserCircle size={11} /> : <Circle size={11} />}
-        {ROLE_LABELS[learner.role]}
-      </span>
+      <div className="lr-role-col">
+        <span className="lr-role-badge" style={{ background: rc.bg, color: rc.color }}>
+          {learner.role === 'admin' ? <Shield size={11} /> : learner.role === 'mallgoer' ? <UserCircle size={11} /> : <Circle size={11} />}
+          {ROLE_LABELS[learner.role]}
+        </span>
+      </div>
       {/* Joined */}
       <span className="lr-joined">{joined}</span>
     </div>
@@ -330,7 +332,8 @@ export default function AdminLearnersPage() {
         .lr-info{flex:1;min-width:0}
         .lr-info strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .lr-info small{display:flex;align-items:center;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .lr-role-badge{display:inline-flex;align-items:center;gap:5px;flex:0 0 110px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+        .lr-role-col{flex:0 0 110px;display:flex;align-items:center}
+        .lr-role-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
         .lr-joined{flex:0 0 120px;font-size:12px;color:var(--muted)}
 
         /* Empty / skeleton */
@@ -354,7 +357,7 @@ export default function AdminLearnersPage() {
 
         @media(max-width:600px){
           .lr-joined{display:none}
-          .lr-role-badge{flex:0 0 90px}
+          .lr-role-col{flex:0 0 90px}
           .lr-col-header{display:none}
         }
       `}</style>
