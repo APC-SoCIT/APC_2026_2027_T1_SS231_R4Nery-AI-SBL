@@ -6,7 +6,7 @@
  * Auth method: email + password.
  * Google OAuth remains available as an alternative.
  */
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
@@ -54,6 +54,19 @@ async function flushPendingStoryCompletion() {
 
 export default function SignInPage() {
   const router = useRouter()
+  
+  // If a fresh user signs in, ensure they don't inherit a stale guest story.
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('story_cleared')) {
+        localStorage.removeItem(PENDING_STORY_KEY)
+      } else {
+        // Consume the flag so a subsequent refresh/visit clears it
+        sessionStorage.removeItem('story_cleared')
+      }
+    } catch {}
+  }, [])
+  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
