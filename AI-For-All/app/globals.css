@@ -4975,3 +4975,128 @@ a.admin-primary {
 @media (prefers-reduced-motion:reduce) {
   .archive-stack-card { transition:none; }
 }
+
+/* Sign Up Confirmation Accessibility Updates */
+
+/* Layout: heading, then [mail badge | message + spam hint], then resend, then wrong-email link */
+.authpage-body.check-email-body { display:grid; grid-template-columns:auto minmax(0, 1fr); column-gap:14px; align-content:start; color:#fff; }
+.check-email-body > * { grid-column:1 / -1; }
+.check-email-body > h2 { grid-row:1; margin-bottom:clamp(18px, 3vh, 24px); }
+.check-email-body > .check-email-icon-wrap { grid-column:1; grid-row:2 / span 2; align-self:start; }
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { grid-column:2; max-width:60ch; }
+
+/* Mail badge: Sign Up navy with APC yellow icon (decorative, aria-hidden in markup) */
+.check-email-icon { display:grid; place-items:center; width:clamp(44px, 12vw, 52px); height:clamp(44px, 12vw, 52px); border-radius:16px; background:var(--apc-navy-deep); color:var(--apc-yellow); }
+.check-email-icon svg { width:52%; height:52%; }
+
+/* Text on APC blue: white (about 7.6:1) and near-white (about 6.3:1), both above WCAG AA 4.5:1 */
+.check-email-desc { margin:0 0 8px; font-size:15px; line-height:1.55; color:#fff; }
+.check-email-desc strong { color:#fff; font-weight:800; }
+.check-email-addr { overflow-wrap:anywhere; }
+.check-email-hint { margin:0; font-size:14px; line-height:1.5; color:rgba(255, 255, 255, .88); }
+.check-email-sent { margin:16px 0 0; font-size:14px; font-weight:700; color:#d4f8d2; }
+.check-email-body > .authpage-error { margin:16px 0 0; font-size:13px; }
+
+/* Resend: full-size, touch-friendly outlined button (same 16px radius as the Sign Up submit) */
+.check-email-resend { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; max-width:480px; min-height:52px; margin-top:clamp(20px, 4vh, 28px); padding:0 20px; border:2px solid rgba(255, 255, 255, .9); border-radius:16px; background:transparent; color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:background .15s; }
+.check-email-resend:hover:not(:disabled) { background:rgba(255, 255, 255, .12); }
+.check-email-resend:disabled { opacity:.65; cursor:default; }
+.check-email-resend .spin { animation:check-email-spin 1s linear infinite; }
+@keyframes check-email-spin { to { transform:rotate(360deg); } }
+
+/* Wrong email: centered under the button, link with a larger tap area */
+.check-email-wrong { max-width:480px; margin:clamp(12px, 2.5vh, 18px) 0 0; text-align:center; font-size:14px; color:rgba(255, 255, 255, .88); }
+.check-email-link { display:inline-block; padding:10px 2px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+
+/* Visible keyboard focus (WCAG 2.4.7) */
+.check-email-resend:focus-visible,
+.check-email-link:focus-visible { outline:3px solid var(--apc-yellow); outline-offset:3px; }
+
+@media (prefers-reduced-motion:reduce) {
+  .check-email-resend .spin { animation:none; }
+}
+
+/* Sign Up Confirmation Centered Layout */
+
+/* Center the whole content group horizontally, and vertically in the blue area below the header.
+   `safe` keeps the top visible on short screens instead of pushing it out of view. */
+.authpage-body.check-email-body { grid-template-columns:auto minmax(0, 440px); justify-content:center; align-content:safe center; }
+
+/* Heading, feedback messages, button and wrong-email line centered within the group */
+.check-email-body > h2,
+.check-email-body > .check-email-sent,
+.check-email-body > .authpage-error,
+.check-email-body > .check-email-wrong { text-align:center; }
+.check-email-body > .check-email-resend,
+.check-email-body > .check-email-wrong { justify-self:center; }
+
+/* Sign Up Confirmation Text Layout Fix */
+
+/* Sign Up Confirmation Vertical Position Fix */
+
+/* Sign Up Confirmation Text and Icon Alignment Fix */
+
+/* Icon column locked to the badge size; text column sizes to its content up to 560px (was capped at 400px, which forced the email and the
+   "Confirm my email" sentence to wrap). Small fixed gap keeps the icon directly beside the message; the row stays centered. */
+.authpage-body.check-email-body { grid-template-columns:clamp(44px, 12vw, 52px) fit-content(560px); column-gap:12px; }
+.check-email-body > .check-email-icon-wrap { justify-self:start; }
+
+/* Heading: one line whenever it fits; only wraps on genuinely narrow screens */
+.check-email-body > h2 { text-wrap:balance; }
+
+/* More breathing room above Resend (button width unchanged: same 468px desktop cap, full width on phones) */
+.check-email-body > .check-email-resend { margin-top:clamp(36px, 6vh, 52px); max-width:468px; }
+
+/* Start the whole group near the top of the blue area (replaces the vertical centering), with a responsive gap below the mascot section.
+   Icon column is fixed to the badge size so the envelope sits right beside the text. */
+.authpage-body.check-email-body { align-content:start; padding-top:clamp(24px, 5vh, 44px); grid-template-columns:clamp(44px, 12vw, 52px) minmax(0, 400px); }
+
+/* Narrower text column (about 50-55 characters per line) so sentences wrap evenly; the group stays centered */
+.authpage-body.check-email-body { grid-template-columns:auto minmax(0, 400px); column-gap:clamp(12px, 3.5vw, 16px); }
+
+/* Heading: centered, slightly tighter, closer to the text block */
+.check-email-body > h2 { line-height:1.12; margin-bottom:clamp(16px, 2.5vh, 22px); }
+
+/* Icon pinned to the top of the text block, aligned with the first line */
+.check-email-body > .check-email-icon-wrap { align-self:start; margin-top:2px; }
+
+/* Message + spam note read as one short paragraph: same size and line-height, small consistent gap */
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { max-width:none; font-size:15px; line-height:1.6; text-align:left; }
+.check-email-body > .check-email-desc { margin:0; }
+.check-email-body > .check-email-hint { margin:6px 0 0; }
+
+/* Clear but connected gap before the resend action */
+.check-email-body > .check-email-resend { margin-top:clamp(24px, 4vh, 32px); }
+
+/* Secondary action: close under the button (the link's 10px tap padding adds the rest) */
+.check-email-body > .check-email-wrong { margin-top:clamp(8px, 1.5vh, 12px); }
+
+/* Sign Up Confirmation Page Layout (consolidated) */
+.authpage-body.check-email-body { display:grid; grid-template-columns:clamp(44px, 12vw, 52px) fit-content(560px); column-gap:12px; justify-content:center; align-content:start; padding-top:clamp(24px, 5vh, 44px); color:#fff; }
+.check-email-body > * { grid-column:1 / -1; }
+.check-email-body > h2 { grid-row:1; margin-bottom:clamp(16px, 2.5vh, 22px); line-height:1.12; text-align:center; text-wrap:balance; }
+.check-email-body > .check-email-icon-wrap { grid-column:1; grid-row:2 / span 2; align-self:start; justify-self:start; margin-top:2px; }
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { grid-column:2; font-size:15px; line-height:1.6; text-align:left; }
+.check-email-body > .check-email-desc { margin:0; color:#fff; }
+.check-email-body > .check-email-hint { margin:6px 0 0; color:rgba(255, 255, 255, .88); }
+.check-email-desc strong { color:#fff; font-weight:800; }
+.check-email-addr { overflow-wrap:anywhere; }
+.check-email-icon { display:grid; place-items:center; width:clamp(44px, 12vw, 52px); height:clamp(44px, 12vw, 52px); border-radius:16px; background:var(--apc-navy-deep); color:var(--apc-yellow); }
+.check-email-icon svg { width:52%; height:52%; }
+.check-email-body > .check-email-sent { margin:16px 0 0; font-size:14px; font-weight:700; color:#d4f8d2; text-align:center; }
+.check-email-body > .authpage-error { margin:16px 0 0; font-size:13px; text-align:center; }
+.check-email-body > .check-email-resend { display:flex; align-items:center; justify-content:center; justify-self:center; gap:8px; width:100%; max-width:468px; min-height:52px; margin-top:clamp(36px, 6vh, 52px); padding:0 20px; border:2px solid rgba(255, 255, 255, .9); border-radius:16px; background:transparent; color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:background .15s; }
+.check-email-resend:hover:not(:disabled) { background:rgba(255, 255, 255, .12); }
+.check-email-resend:disabled { opacity:.65; cursor:default; }
+.check-email-resend .spin { animation:check-email-spin 1s linear infinite; }
+@keyframes check-email-spin { to { transform:rotate(360deg); } }
+.check-email-body > .check-email-wrong { justify-self:center; max-width:480px; margin:clamp(8px, 1.5vh, 12px) 0 0; text-align:center; font-size:14px; color:rgba(255, 255, 255, .88); }
+.check-email-link { display:inline-block; padding:10px 2px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.check-email-resend:focus-visible,
+.check-email-link:focus-visible { outline:3px solid var(--apc-yellow); outline-offset:3px; }
+@media (prefers-reduced-motion:reduce) {
+  .check-email-resend .spin { animation:none; }
+}

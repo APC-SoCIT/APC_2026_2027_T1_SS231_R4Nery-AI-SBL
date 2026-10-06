@@ -68,18 +68,18 @@ function CheckEmailInner() {
           <ChevronLeft size={20} />
         </Link>
         <img
-          className="authpage-mascot-img signup-mascot"
+          className="authpage-mascot-img authpage-mascot-lg signup-mascot"
           src="/ai-for-all/Mascot-look-down.png"
           alt="AI for ALL mascot"
+          // Same size and position as Sign Up: paws on the header/body dividing line
+          style={{ bottom: 0 }}
         />
       </div>
 
       {/* Body */}
       <div className="authpage-body check-email-body">
         <h2>
-          Check your
-          <br />
-          inbox!
+          Check your inbox!
         </h2>
 
         {/* Email icon badge */}
