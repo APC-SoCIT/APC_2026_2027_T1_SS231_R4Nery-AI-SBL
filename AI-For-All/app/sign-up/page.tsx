@@ -5,7 +5,7 @@
  *
  * Auth method: email + password.
  */
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
@@ -32,27 +32,22 @@ const SUPABASE_CONFIGURED =
 // Letters and numbers only — no symbols/spaces.
 const PASSWORD_PATTERN = /^[A-Za-z0-9]+$/
 
-/**
- * After a guest creates an account, sync any story they completed as a guest.
- * The storyId was persisted to localStorage by the Story Cleared screen.
- */
-async function flushPendingStoryCompletion() {
-  try {
-    const storyId = localStorage.getItem(PENDING_STORY_KEY)
-    if (!storyId) return
-    await fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storyId }),
-    })
-    localStorage.removeItem(PENDING_STORY_KEY)
-  } catch {
-    // Non-fatal — progress sync failure should not interrupt the redirect
-  }
-}
+// We no longer manually flush pending stories on sign-up; the /home page handles it.
 
 export default function SignUpPage() {
   const router = useRouter()
+  
+  // If a fresh user signs up, ensure they don't inherit a stale guest story.
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('story_cleared')) {
+        localStorage.removeItem(PENDING_STORY_KEY)
+      } else {
+        // Consume the flag so a subsequent refresh/visit clears it
+        sessionStorage.removeItem('story_cleared')
+      }
+    } catch {}
+  }, [])
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -141,7 +136,6 @@ export default function SignUpPage() {
       // without SMTP set up), signUp() returns an active session right
       // away — skip the "check your inbox" screen and go straight in.
       if (signUpData.session) {
-        await flushPendingStoryCompletion()
         router.push('/home')
         return
       }

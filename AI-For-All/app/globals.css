@@ -1836,6 +1836,126 @@ a.admin-primary {
   color: var(--apc-navy-deep);
 }
 
+/* ── Check-email confirmation page ─────────────────────────────────────────── */
+
+.check-email-body {
+  gap: 12px;
+}
+
+.check-email-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 2px;
+}
+
+.check-email-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.check-email-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-addr {
+  color: #fff;
+  word-break: break-all;
+}
+
+.check-email-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-sent {
+  font-size: 13px;
+  color: #b5f0b0;
+  text-align: center;
+  font-weight: 700;
+  margin: 0;
+}
+
+.check-email-resend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, opacity 0.18s;
+}
+
+.check-email-resend:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.check-email-resend:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.check-email-signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.check-email-signin-divider::before,
+.check-email-signin-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.check-email-signin-divider span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.check-email-signin-btn {
+  margin-top: 0;
+  text-decoration: none;
+}
+
+.check-email-wrong {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+
 .profile-setup img {
   display: block;
   width: 280px;

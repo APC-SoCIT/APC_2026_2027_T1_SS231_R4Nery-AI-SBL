@@ -127,6 +127,7 @@ export default function StoryScenePage() {
         // Store the pending completion so sign-in/sign-up pages can flush it.
         try {
           localStorage.setItem(PENDING_STORY_KEY, story.id)
+          sessionStorage.setItem('story_cleared', 'true')
         } catch {
           // localStorage may be unavailable — non-fatal
         }
