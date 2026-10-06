@@ -134,6 +134,8 @@ export default function ArchivePage() {
           .from('stories')
           .select('id, title, color, category, level')
           .in('id', completedIds)
+          // Only stories still visible to learners; completion records stay untouched
+          .eq('status', 'Published')
 
         if (storiesData) {
           const ordered = completedIds
