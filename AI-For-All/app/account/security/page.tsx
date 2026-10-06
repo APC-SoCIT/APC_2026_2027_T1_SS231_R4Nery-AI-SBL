@@ -15,9 +15,13 @@ import { ArrowLeft, Lock, Globe2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
 
+// Password rules — must match sign-up: 8+ chars, letters & numbers only
+const PASSWORD_PATTERN = /^[A-Za-z0-9]+$/
+
 export default function AccountSecurityPage() {
   const supabase = createClient()
 
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [savingPw, setSavingPw] = useState(false)
@@ -36,10 +40,31 @@ export default function AccountSecurityPage() {
   // ── Change password ────────────────────────────────────────────────────────
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
+    if (!currentPassword) { toast.error('Please enter your current password.'); return }
     if (password.length < 8) { toast.error('Password must be at least 8 characters.'); return }
-    if (password !== confirm)  { toast.error('Passwords do not match.'); return }
+    if (!PASSWORD_PATTERN.test(password)) {
+      toast.error('Password can only contain letters and numbers — no symbols or spaces.')
+      return
+    }
+    if (password === currentPassword) { toast.error('New password cannot be the same as your current password.'); return }
+    if (password !== confirm) { toast.error('Passwords do not match.'); return }
 
     setSavingPw(true)
+
+    // Verify current password before updating
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.email) {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
+      if (signInErr) {
+        toast.error('Current password is incorrect.')
+        setSavingPw(false)
+        return
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({ password })
     setSavingPw(false)
 
@@ -47,19 +72,9 @@ export default function AccountSecurityPage() {
       toast.error(error.message)
     } else {
       toast.success('Password updated!')
+      setCurrentPassword('')
       setPassword('')
       setConfirm('')
-
-      // Audit log
-      try {
-        await fetch('/api/account/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          // Reuse the PATCH endpoint just to trigger the audit write;
-          // pass name as empty to skip the name update — the API validates.
-          // Instead call a lightweight approach: fire-and-forget to the audit.
-        })
-      } catch { /* audit is non-fatal */ }
     }
   }
 
@@ -80,7 +95,7 @@ export default function AccountSecurityPage() {
   }
 
   const hasGoogle = identities.includes('google')
-  const pwReady = password.length >= 8 && password === confirm
+  const pwReady = !!currentPassword && password.length >= 8 && PASSWORD_PATTERN.test(password) && password !== currentPassword && password === confirm
 
   return (
     <main className="simple-page">
@@ -107,20 +122,35 @@ export default function AccountSecurityPage() {
 
         <form onSubmit={handleChangePassword} className="acct-form" style={{ marginTop: 0 }}>
           <label className="acct-label">
+            <span className="acct-label-text">Current password</span>
+            <input
+              className="acct-input"
+              type="password"
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              placeholder="Enter your current password"
+              autoComplete="current-password"
+            />
+          </label>
+
+          <label className="acct-label">
             <span className="acct-label-text">New password</span>
             <input
               className="acct-input"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="8+ characters, letters and numbers only"
               minLength={8}
               autoComplete="new-password"
             />
+            <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>
+              8+ characters, letters and numbers only (no symbols or spaces).
+            </span>
           </label>
 
           <label className="acct-label">
-            <span className="acct-label-text">Confirm password</span>
+            <span className="acct-label-text">Confirm new password</span>
             <input
               className="acct-input"
               type="password"

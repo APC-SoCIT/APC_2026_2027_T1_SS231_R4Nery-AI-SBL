@@ -93,12 +93,12 @@ function CheckEmailInner() {
           We sent a confirmation link to{' '}
           <strong className="check-email-addr">{displayEmail}</strong>.
           <br />
-          Click <strong>"Confirm my email"</strong> inside it and you'll be logged
-          in automatically.
+          Click <strong>&quot;Confirm my email&quot;</strong> inside it and you&apos;ll be
+          logged in automatically.
         </p>
 
         <p className="check-email-hint">
-          Can't find it? Check your spam folder.
+          Can&apos;t find it? Check your spam folder.
         </p>
 
         {/* Resend feedback */}
@@ -126,6 +126,19 @@ function CheckEmailInner() {
             ? `Resend in ${cooldown}s`
             : 'Resend confirmation email'}
         </button>
+
+        {/* Sign In CTA — for users who have already confirmed their email */}
+        <div className="check-email-signin-divider">
+          <span>Already confirmed your email?</span>
+        </div>
+
+        <Link
+          id="check-email-signin-btn"
+          href="/sign-in"
+          className="authpage-submit is-ready check-email-signin-btn"
+        >
+          Go to Sign In
+        </Link>
 
         {/* Wrong email? */}
         <p className="check-email-wrong">

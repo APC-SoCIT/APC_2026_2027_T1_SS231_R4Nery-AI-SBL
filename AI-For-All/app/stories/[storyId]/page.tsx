@@ -127,6 +127,7 @@ export default function StoryScenePage() {
         // Store the pending completion so sign-in/sign-up pages can flush it.
         try {
           localStorage.setItem(PENDING_STORY_KEY, story.id)
+          sessionStorage.setItem('story_cleared', 'true')
         } catch {
           // localStorage may be unavailable — non-fatal
         }
@@ -483,7 +484,23 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
               </Link>
             </div>
             <div className="story-cleared-divider" />
-            {/* Row 2: Return to Home Screen */}
+            {/* Row 2: IBM SkillsBuild */}
+            {story.skillsBuildUrl && (
+              <>
+                <div className="story-cleared-cta-row">
+                  <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                    <BookOpen size={20} />
+                    <Star size={10} className="story-cleared-book-star" />
+                  </div>
+                  <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+                  <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                    {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                  </a>
+                </div>
+                <div className="story-cleared-divider" />
+              </>
+            )}
+            {/* Row 3: Return to Home Screen */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
                 <Star size={20} />
@@ -493,20 +510,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 Home Screen
               </Link>
             </div>
-            <div className="story-cleared-divider" />
-            {/* Row 3: IBM SkillsBuild */}
-            {story.skillsBuildUrl && (
-              <div className="story-cleared-cta-row">
-                <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
-                  <BookOpen size={20} />
-                  <Star size={10} className="story-cleared-book-star" />
-                </div>
-                <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
-                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
-                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
-                </a>
-              </div>
-            )}
           </>
         )}
       </div>

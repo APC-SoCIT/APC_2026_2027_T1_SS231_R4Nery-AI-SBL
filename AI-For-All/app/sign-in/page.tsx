@@ -6,7 +6,7 @@
  * Auth method: email + password.
  * Google OAuth remains available as an alternative.
  */
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
@@ -19,10 +19,12 @@ const SUPABASE_ERRORS: Record<string, string> = {
   invalid_credentials: 'Incorrect email or password.',
   email_not_confirmed: 'Please verify your email first.',
   over_request_rate_limit: 'Too many attempts. Please wait a moment before trying again.',
+  user_banned: 'For account activation please email the admin at admin@aiforall.com',
 }
 
 function mapError(code: string | undefined, message: string): string {
   if (code && SUPABASE_ERRORS[code]) return SUPABASE_ERRORS[code]
+  if (message.toLowerCase().includes('banned')) return SUPABASE_ERRORS['user_banned']
   return message
 }
 
@@ -52,6 +54,19 @@ async function flushPendingStoryCompletion() {
 
 export default function SignInPage() {
   const router = useRouter()
+  
+  // If a fresh user signs in, ensure they don't inherit a stale guest story.
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('story_cleared')) {
+        localStorage.removeItem(PENDING_STORY_KEY)
+      } else {
+        // Consume the flag so a subsequent refresh/visit clears it
+        sessionStorage.removeItem('story_cleared')
+      }
+    } catch {}
+  }, [])
+  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
