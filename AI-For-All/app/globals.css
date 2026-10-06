@@ -4655,3 +4655,43 @@ a.admin-primary {
     padding: 24px 20px;
   }
 }
+
+/* ── Password strength checklist ──────────────────────── */
+.settings-pw-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -6px 0 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8f9fb;
+  border: 1.5px solid var(--line);
+}
+
+.settings-pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: color .2s;
+}
+
+.settings-pw-rule--pass {
+  color: #059669;
+}
+
+.settings-pw-rule--fail {
+  color: #dc2626;
+}
+
+.settings-pw-rule--pass svg {
+  flex-shrink: 0;
+  color: #059669;
+}
+
+.settings-pw-rule--fail svg {
+  flex-shrink: 0;
+  color: #dc2626;
+  opacity: .65;
+}
