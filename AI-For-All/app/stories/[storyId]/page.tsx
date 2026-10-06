@@ -28,6 +28,8 @@ export default function StoryScenePage() {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  const [aiResponse, setAiResponse] = useState<string | null>(null)
+  const [isEvaluating, setIsEvaluating] = useState(false)
   // Weight of every choice made so far, so going back can undo the score
   const [history, setHistory] = useState<number[]>([])
   const presenceCleanup = useRef<(() => void) | null>(null)
@@ -238,9 +240,35 @@ export default function StoryScenePage() {
     setStep('splash')
   }
 
-  function submitActivity(e: FormEvent) {
+  async function submitActivity(e: FormEvent) {
     e.preventDefault()
+    if (!promptText.trim() || !story) return
     setStep('response')
+    setIsEvaluating(true)
+    
+    try {
+      const res = await fetch('/api/evaluate-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storyTitle: story.title,
+          category: story.category,
+          activityPrompt,
+          userAnswer: promptText
+        })
+      })
+      const data = await res.json()
+      if (res.ok && data.feedback) {
+        setAiResponse(data.feedback)
+      } else {
+        setAiResponse(null)
+      }
+    } catch (err) {
+      console.error(err)
+      setAiResponse(null)
+    } finally {
+      setIsEvaluating(false)
+    }
   }
 
   if (step === 'splash') {
@@ -369,9 +397,9 @@ export default function StoryScenePage() {
             AI is like a little mind that watches, learns, and gets better each time you show it something new.
           </div>
           <div className="story-scene-bubble">
-            Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
+            {isEvaluating ? 'Reading your answer...' : (aiResponse || `Nice work — your answer showed real thinking about ${story.category.toLowerCase()}.`)}
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('reaction')}>
+          <button type="button" className="stories-cta" onClick={() => setStep('reaction')} disabled={isEvaluating}>
             Finish
           </button>
         </>
@@ -455,7 +483,23 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
               </Link>
             </div>
             <div className="story-cleared-divider" />
-            {/* Row 2: Return to Home Screen */}
+            {/* Row 2: IBM SkillsBuild */}
+            {story.skillsBuildUrl && (
+              <>
+                <div className="story-cleared-cta-row">
+                  <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                    <BookOpen size={20} />
+                    <Star size={10} className="story-cleared-book-star" />
+                  </div>
+                  <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+                  <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                    {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                  </a>
+                </div>
+                <div className="story-cleared-divider" />
+              </>
+            )}
+            {/* Row 3: Return to Home Screen */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
                 <Star size={20} />
@@ -465,20 +509,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 Home Screen
               </Link>
             </div>
-            <div className="story-cleared-divider" />
-            {/* Row 3: IBM SkillsBuild */}
-            {story.skillsBuildUrl && (
-              <div className="story-cleared-cta-row">
-                <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
-                  <BookOpen size={20} />
-                  <Star size={10} className="story-cleared-book-star" />
-                </div>
-                <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
-                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
-                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
-                </a>
-              </div>
-            )}
           </>
         )}
       </div>
