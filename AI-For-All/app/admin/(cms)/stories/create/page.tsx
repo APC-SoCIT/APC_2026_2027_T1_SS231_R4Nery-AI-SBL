@@ -20,6 +20,7 @@ export default function CreateStoryWizard() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [genError, setGenError] = useState<string | null>(null)
 
   // Fake-but-smooth progress bar while the AI request is in flight.
@@ -113,9 +114,47 @@ export default function CreateStoryWizard() {
     }
   }
 
+  // Validate that no scene has blank body or blank choices
+  const validateScenes = (): string[] => {
+    if (!generatedStory) return []
+    const errors: string[] = []
+    generatedStory.scenes.forEach((scene, i) => {
+      const label = scene.title || `Scene ${i + 1}`
+      if (!scene.body?.trim()) {
+        errors.push(`${label}: Narration / Story Body cannot be empty.`)
+      }
+      const choices = scene.choices || []
+      if (!choices[0]?.label?.trim()) {
+        errors.push(`${label}: Choice A cannot be empty.`)
+      }
+      if (!choices[1]?.label?.trim()) {
+        errors.push(`${label}: Choice B cannot be empty.`)
+      }
+    })
+    return errors
+  }
+
   const handleNext = () => {
     if (step === 1) {
       handleGenerateStory()
+    } else if (step === 3) {
+      const errors = validateScenes()
+      if (errors.length > 0) {
+        setValidationErrors(errors)
+        // Jump to the first scene with an error
+        if (generatedStory) {
+          const firstBadIdx = generatedStory.scenes.findIndex((s, i) => {
+            if (!s.body?.trim()) return true
+            if (!s.choices?.[0]?.label?.trim()) return true
+            if (!s.choices?.[1]?.label?.trim()) return true
+            return false
+          })
+          if (firstBadIdx >= 0) setActiveSceneIndex(firstBadIdx)
+        }
+        return
+      }
+      setValidationErrors([])
+      setStep(4)
     } else if (step < 4) {
       setStep(step + 1)
     } else {
@@ -284,7 +323,7 @@ export default function CreateStoryWizard() {
               </div>
               <div className={styles.col}>
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Difficulty Level</label>
+                  <label className={styles.inputLabel}>Level</label>
                   <select className={styles.selectInput} value={level} onChange={e => setLevel(e.target.value)}>
                     <option value="Starter">Starter</option>
                     <option value="Intermediate">Intermediate</option>
@@ -296,7 +335,6 @@ export default function CreateStoryWizard() {
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Number of Scenes</label>
                   <select className={styles.selectInput} value={sceneCount} onChange={e => setSceneCount(Number(e.target.value))}>
-                    <option value={2}>2 Scenes</option>
                     <option value={3}>3 Scenes</option>
                     <option value={4}>4 Scenes</option>
                     <option value={5}>5 Scenes</option>
@@ -368,21 +406,48 @@ export default function CreateStoryWizard() {
 
         {/* STEP 3: REVIEW & EDIT */}
         {step === 3 && generatedStory && (
+          <div>
+            {validationErrors.length > 0 && (
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                color: '#991b1b',
+                fontSize: '14px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '18px' }}>⚠️</span>
+                  <strong>Please fill in all required fields before continuing:</strong>
+                </div>
+                <ul style={{ margin: '0', paddingLeft: '24px' }}>
+                  {validationErrors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           <div className={styles.reviewLayout}>
             {/* Scenes Sidebar */}
             <div className={styles.sidebar}>
               <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64647b', textTransform: 'uppercase' }}>
                 Story Flow ({generatedStory.scenes.length})
               </h4>
-              {generatedStory.scenes.map((s, i) => (
+              {generatedStory.scenes.map((s, i) => {
+                const hasError = !s.body?.trim() || !s.choices?.[0]?.label?.trim() || !s.choices?.[1]?.label?.trim()
+                return (
                 <div
                   key={s.id || i}
-                  onClick={() => setActiveSceneIndex(i)}
+                  onClick={() => { setActiveSceneIndex(i); setValidationErrors([]) }}
                   className={`${styles.sceneTab} ${activeSceneIndex === i ? styles.active : ''}`}
+                  style={validationErrors.length > 0 && hasError ? { borderColor: '#ef4444', borderWidth: '1.5px', borderStyle: 'solid' } : undefined}
                 >
                   Scene {i + 1}: {s.title || `Scene ${i + 1}`}
+                  {validationErrors.length > 0 && hasError && <span style={{ color: '#ef4444', marginLeft: '6px', fontSize: '13px' }}>⚠</span>}
                 </div>
-              ))}
+                )
+              })}
 
               {storyType === 'with_activity' && (
                 <div
@@ -417,7 +482,11 @@ export default function CreateStoryWizard() {
                       rows={5}
                       value={currentScene?.body || ''}
                       onChange={e => updateActiveScene('body', e.target.value)}
+                      style={!currentScene?.body?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : undefined}
                     />
+                    {!currentScene?.body?.trim() && validationErrors.length > 0 && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Story body is required.</span>
+                    )}
                   </div>
 
                   <div className={styles.choiceGrid}>
@@ -425,21 +494,27 @@ export default function CreateStoryWizard() {
                       <h5>Choice A</h5>
                       <textarea
                         className={styles.textArea}
-                        style={{ minHeight: '80px' }}
+                        style={{ minHeight: '80px', ...(!currentScene?.choices?.[0]?.label?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : {}) }}
                         value={currentScene?.choices?.[0]?.label || ''}
                         onChange={e => updateChoiceLabel(0, e.target.value)}
                         placeholder="Option A label"
                       />
+                      {!currentScene?.choices?.[0]?.label?.trim() && validationErrors.length > 0 && (
+                        <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Choice A is required.</span>
+                      )}
                     </div>
                     <div className={styles.choiceBox}>
                       <h5>Choice B</h5>
                       <textarea
                         className={styles.textArea}
-                        style={{ minHeight: '80px' }}
+                        style={{ minHeight: '80px', ...(!currentScene?.choices?.[1]?.label?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : {}) }}
                         value={currentScene?.choices?.[1]?.label || ''}
                         onChange={e => updateChoiceLabel(1, e.target.value)}
                         placeholder="Option B label"
                       />
+                      {!currentScene?.choices?.[1]?.label?.trim() && validationErrors.length > 0 && (
+                        <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Choice B is required.</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -480,6 +555,7 @@ export default function CreateStoryWizard() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         )}
 

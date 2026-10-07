@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Check, X as XIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getMockSession, updateMockSession } from '@/lib/mock-auth'
+import { getMockSession, updateMockSession, updateMockPassword } from '@/lib/mock-auth'
 
 export default function AdminSettingsPage() {
   const supabase = createClient()
@@ -81,10 +81,22 @@ export default function AdminSettingsPage() {
     }
   }
 
+  // Password strength rules
+  const passwordRules = useMemo(() => [
+    { label: 'At least 8 characters', test: (pw: string) => pw.length >= 8 },
+    { label: 'One uppercase letter (A–Z)', test: (pw: string) => /[A-Z]/.test(pw) },
+    { label: 'One lowercase letter (a–z)', test: (pw: string) => /[a-z]/.test(pw) },
+    { label: 'One number (0–9)', test: (pw: string) => /[0-9]/.test(pw) },
+    { label: 'One special character (!@#$%^&*…)', test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+  ], [])
+
+  const ruleResults = passwordRules.map(r => r.test(newPassword))
+  const allRulesPassed = ruleResults.every(Boolean)
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newPassword.length < 6) {
-      setToast({ type: 'error', msg: 'Password must be at least 6 characters.' })
+    if (!allRulesPassed) {
+      setToast({ type: 'error', msg: 'Password does not meet all requirements.' })
       return
     }
     if (newPassword !== confirmPassword) {
@@ -94,12 +106,11 @@ export default function AdminSettingsPage() {
     setPassLoading(true)
     const mockSession = getMockSession()
     if (mockSession) {
-      setTimeout(() => {
-        setNewPassword('')
-        setConfirmPassword('')
-        setToast({ type: 'success', msg: 'Password changed successfully!' })
-        setPassLoading(false)
-      }, 500)
+      updateMockPassword(newPassword)
+      setNewPassword('')
+      setConfirmPassword('')
+      setToast({ type: 'success', msg: 'Password changed successfully!' })
+      setPassLoading(false)
       return
     }
 
@@ -164,7 +175,7 @@ export default function AdminSettingsPage() {
         </div>
         <h2>Change Password</h2>
         <p className="settings-card-desc">
-          Choose a strong password with at least 6 characters.
+          Choose a strong password that meets all of the requirements below.
         </p>
 
         <label className="settings-label">
@@ -187,6 +198,23 @@ export default function AdminSettingsPage() {
             </button>
           </div>
         </label>
+
+        {/* Live password requirements checklist */}
+        {newPassword.length > 0 && (
+          <div className="settings-pw-rules">
+            {passwordRules.map((rule, i) => (
+              <div
+                key={rule.label}
+                className={`settings-pw-rule ${ruleResults[i] ? 'settings-pw-rule--pass' : 'settings-pw-rule--fail'}`}
+              >
+                {ruleResults[i]
+                  ? <Check size={13} strokeWidth={3} />
+                  : <XIcon size={13} strokeWidth={2.5} />}
+                <span>{rule.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <label className="settings-label">
           Confirm Password
@@ -215,7 +243,7 @@ export default function AdminSettingsPage() {
         <button
           type="submit"
           className="settings-save settings-save--coral"
-          disabled={passLoading || !newPassword || !confirmPassword}
+          disabled={passLoading || !newPassword || !confirmPassword || !allRulesPassed || passwordMismatch}
         >
           {passLoading ? <><Loader2 size={15} className="dash-spin" /> Updating…</> : 'Update Password'}
         </button>

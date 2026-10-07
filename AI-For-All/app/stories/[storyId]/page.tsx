@@ -28,6 +28,8 @@ export default function StoryScenePage() {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [promptText, setPromptText] = useState('')
+  const [aiResponse, setAiResponse] = useState<string | null>(null)
+  const [isEvaluating, setIsEvaluating] = useState(false)
   // Weight of every choice made so far, so going back can undo the score
   const [history, setHistory] = useState<number[]>([])
   const presenceCleanup = useRef<(() => void) | null>(null)
@@ -125,6 +127,7 @@ export default function StoryScenePage() {
         // Store the pending completion so sign-in/sign-up pages can flush it.
         try {
           localStorage.setItem(PENDING_STORY_KEY, story.id)
+          sessionStorage.setItem('story_cleared', 'true')
         } catch {
           // localStorage may be unavailable — non-fatal
         }
@@ -238,9 +241,35 @@ export default function StoryScenePage() {
     setStep('splash')
   }
 
-  function submitActivity(e: FormEvent) {
+  async function submitActivity(e: FormEvent) {
     e.preventDefault()
+    if (!promptText.trim() || !story) return
     setStep('response')
+    setIsEvaluating(true)
+    
+    try {
+      const res = await fetch('/api/evaluate-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storyTitle: story.title,
+          category: story.category,
+          activityPrompt,
+          userAnswer: promptText
+        })
+      })
+      const data = await res.json()
+      if (res.ok && data.feedback) {
+        setAiResponse(data.feedback)
+      } else {
+        setAiResponse(null)
+      }
+    } catch (err) {
+      console.error(err)
+      setAiResponse(null)
+    } finally {
+      setIsEvaluating(false)
+    }
   }
 
   if (step === 'splash') {
@@ -325,7 +354,7 @@ export default function StoryScenePage() {
                 className="choice-button"
                 onClick={() => choose(choice.weight)}
               >
-                {i + 1}. {choice.label}
+                {choice.label}
               </button>
             ))}
           </div>
@@ -369,9 +398,9 @@ export default function StoryScenePage() {
             AI is like a little mind that watches, learns, and gets better each time you show it something new.
           </div>
           <div className="story-scene-bubble">
-            Nice work — your answer showed real thinking about {story.category.toLowerCase()}.
+            {isEvaluating ? 'Reading your answer...' : (aiResponse || `Nice work — your answer showed real thinking about ${story.category.toLowerCase()}.`)}
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('reaction')}>
+          <button type="button" className="stories-cta" onClick={() => setStep('reaction')} disabled={isEvaluating}>
             Finish
           </button>
         </>
