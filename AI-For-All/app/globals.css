@@ -5216,3 +5216,48 @@ a.admin-primary {
   .getstarted-content > .getstarted-guest,
   .getstarted-content > .getstarted-a11y { width:100%; max-width:424px; justify-self:center; }
 }
+
+/* Restored UI: Archive and Story Cleared (lost in merge) */
+
+/* Sign Up: keep the small gap above the terms that the removed Google button row used to provide */
+.authpage-signup .authpage-terms { margin-top:6px; }
+
+/* Story Cleared action rows (Guest + Registered): icon beside its text, button below at full width */
+.story-cleared-card .story-cleared-cta-row { display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; column-gap:12px; row-gap:12px; }
+.story-cleared-card .story-cleared-cta-row > .story-cleared-btn { grid-column:1 / -1; }
+
+/* Archive: wider stack (header widens too so the search bar stays aligned), more space under the search, stack sits lower */
+.archive-header, .archive-body { max-width:680px; }
+.archive-body { padding-top:clamp(32px, 7vh, 64px); }
+.archive-page { padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* Archive: full folder cards (same notched top and 28px overlap; each card extends downward) */
+.archive-stack-list { position:relative; }
+.archive-stack-card { flex-shrink:0; min-height:clamp(150px, 21vh, 200px); }
+
+/* Archive with 1 or 2 stories: larger folders, centered between the search and the navbar */
+.archive-stack-list--few { margin:auto; width:100%; max-width:480px; }
+.archive-stack-list--few .archive-stack-card { min-height:clamp(190px, 30vh, 280px); }
+
+/* Archive with 3+ stories: the stack scrolls on its own between the header and the navbar (tall enough screens only) */
+@media (min-height: 560px) {
+  .archive-page--stack-scroll { height:100dvh; }
+  .archive-page--stack-scroll .archive-body { min-height:0; }
+  .archive-stack-list--scroll { flex:0 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-left:-8px; margin-right:-8px; padding:16px 8px 8px; cursor:grab; user-select:none; -webkit-user-select:none;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%); }
+  .archive-stack-list--scroll::-webkit-scrollbar { display:none; }
+  .archive-stack-list--scroll.is-dragging { cursor:grabbing; }
+  /* Wheel feel: cards away from the middle shrink up to 5%; the open card stays full size */
+  .archive-stack-list--scroll .archive-stack-card { transform:scale(calc(1 - var(--wheel, 0) * .05)); will-change:transform; }
+  .archive-stack-list--scroll .archive-stack-card.expanded { transform:none; }
+}
+
+/* Archive folder opening lift: the open folder moves slightly up and eases back on close (never fixed or sticky) */
+.archive-stack-card { translate:0 0; transition:translate .32s cubic-bezier(.2, .8, .2, 1); }
+.archive-stack-card.expanded { translate:0 calc(-1 * clamp(6px, 1.2vh, 10px)); }
+
+@media (prefers-reduced-motion:reduce) {
+  .archive-stack-list--scroll .archive-stack-card { transform:none; }
+  .archive-stack-card { transition:none; }
+}
