@@ -15,6 +15,7 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
   
   // Editor State
   const [activeSceneIndex, setActiveSceneIndex] = useState(0)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   useEffect(() => {
     const loadStory = async () => {
@@ -81,7 +82,40 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
     })
   }
 
+  // Validate that no scene has blank body or blank choices
+  const validateScenes = (): string[] => {
+    const errors: string[] = []
+    story.scenes.forEach((scene, i) => {
+      const label = scene.title || `Scene ${i + 1}`
+      if (!scene.body?.trim()) {
+        errors.push(`${label}: Narration / Story Body cannot be empty.`)
+      }
+      const choices = scene.choices || []
+      if (!choices[0]?.label?.trim()) {
+        errors.push(`${label}: Choice A cannot be empty.`)
+      }
+      if (!choices[1]?.label?.trim()) {
+        errors.push(`${label}: Choice B cannot be empty.`)
+      }
+    })
+    return errors
+  }
+
   const handleSave = async () => {
+    const errors = validateScenes()
+    if (errors.length > 0) {
+      setValidationErrors(errors)
+      // Jump to the first scene with an error
+      const firstBadIdx = story.scenes.findIndex((s) => {
+        if (!s.body?.trim()) return true
+        if (!s.choices?.[0]?.label?.trim()) return true
+        if (!s.choices?.[1]?.label?.trim()) return true
+        return false
+      })
+      if (firstBadIdx >= 0) setActiveSceneIndex(firstBadIdx)
+      return
+    }
+    setValidationErrors([])
     setSaving(true)
     const updatedStory = {
         ...story,
@@ -134,6 +168,28 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
            </div>
          </div>
 
+         {validationErrors.length > 0 && (
+           <div style={{
+             background: '#fef2f2',
+             border: '1px solid #fecaca',
+             borderRadius: '8px',
+             padding: '12px 16px',
+             marginBottom: '16px',
+             color: '#991b1b',
+             fontSize: '14px',
+           }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+               <span style={{ fontSize: '18px' }}>⚠️</span>
+               <strong>Please fill in all required fields before saving:</strong>
+             </div>
+             <ul style={{ margin: '0', paddingLeft: '24px' }}>
+               {validationErrors.map((err, i) => (
+                 <li key={i}>{err}</li>
+               ))}
+             </ul>
+           </div>
+         )}
+
          {/* Editor */}
          <div className={styles.reviewLayout}>
             {/* Scenes Sidebar */}
@@ -141,15 +197,20 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
               <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64647b', textTransform: 'uppercase' }}>
                 Story Flow ({story.scenes.length})
               </h4>
-              {story.scenes.map((s, i) => (
+              {story.scenes.map((s, i) => {
+                const hasError = !s.body?.trim() || !s.choices?.[0]?.label?.trim() || !s.choices?.[1]?.label?.trim()
+                return (
                 <div
                   key={s.id || i}
-                  onClick={() => setActiveSceneIndex(i)}
+                  onClick={() => { setActiveSceneIndex(i); setValidationErrors([]) }}
                   className={`${styles.sceneTab} ${activeSceneIndex === i ? styles.active : ''}`}
+                  style={validationErrors.length > 0 && hasError ? { borderColor: '#ef4444', borderWidth: '1.5px', borderStyle: 'solid' } : undefined}
                 >
                   Scene {i + 1}: {s.title || `Scene ${i + 1}`}
+                  {validationErrors.length > 0 && hasError && <span style={{ color: '#ef4444', marginLeft: '6px', fontSize: '13px' }}>⚠</span>}
                 </div>
-              ))}
+                )
+              })}
 
               {story.type === 'with_activity' && (
                 <div
@@ -184,7 +245,11 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
                       rows={5}
                       value={currentScene?.body || ''}
                       onChange={e => updateActiveScene('body', e.target.value)}
+                      style={!currentScene?.body?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : undefined}
                     />
+                    {!currentScene?.body?.trim() && validationErrors.length > 0 && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Story body is required.</span>
+                    )}
                   </div>
 
                   <div className={styles.choiceGrid}>
@@ -192,21 +257,27 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
                       <h5>Choice A</h5>
                       <textarea
                         className={styles.textArea}
-                        style={{ minHeight: '80px' }}
+                        style={{ minHeight: '80px', ...(!currentScene?.choices?.[0]?.label?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : {}) }}
                         value={currentScene?.choices?.[0]?.label || ''}
                         onChange={e => updateChoiceLabel(0, e.target.value)}
                         placeholder="Option A label"
                       />
+                      {!currentScene?.choices?.[0]?.label?.trim() && validationErrors.length > 0 && (
+                        <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Choice A is required.</span>
+                      )}
                     </div>
                     <div className={styles.choiceBox}>
                       <h5>Choice B</h5>
                       <textarea
                         className={styles.textArea}
-                        style={{ minHeight: '80px' }}
+                        style={{ minHeight: '80px', ...(!currentScene?.choices?.[1]?.label?.trim() && validationErrors.length > 0 ? { borderColor: '#ef4444', borderWidth: '1.5px' } : {}) }}
                         value={currentScene?.choices?.[1]?.label || ''}
                         onChange={e => updateChoiceLabel(1, e.target.value)}
                         placeholder="Option B label"
                       />
+                      {!currentScene?.choices?.[1]?.label?.trim() && validationErrors.length > 0 && (
+                        <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Choice B is required.</span>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -354,7 +354,7 @@ export default function StoryScenePage() {
                 className="choice-button"
                 onClick={() => choose(choice.weight)}
               >
-                {i + 1}. {choice.label}
+                {choice.label}
               </button>
             ))}
           </div>
