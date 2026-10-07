@@ -5161,3 +5161,23 @@ a.admin-primary {
   color: #dc2626;
   opacity: .65;
 }
+
+/* Latest UI Fix for Get Started Page */
+
+/* Portrait (phones and tablets): logo above the content, everything centered, group slightly lower */
+.getstarted-content { width:100%; max-width:440px; margin:0 auto; padding-top:clamp(64px, 11vh, 112px); text-align:center; }
+.getstarted-content > p:first-of-type { margin-left:auto; margin-right:auto; }
+.getstarted-content .getstarted-logo { display:block; width:clamp(72px, min(24vw, 12vh), 112px); max-width:100%; height:auto; margin:0 auto clamp(16px, 3vh, 28px); object-fit:contain; }
+
+/* Landscape (phone landscape, tablet landscape, laptop, desktop): title + subtitle left, logo right, buttons centered below */
+@media (orientation: landscape) and (min-width: 560px) {
+  .getstarted-content { display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:clamp(32px, 6vw, 96px); align-items:start; max-width:clamp(480px, 62vw, 640px); padding-top:clamp(24px, 7vh, 72px); text-align:left; }
+  .getstarted-content > * { grid-column:1 / -1; }
+  .getstarted-content > h2 { grid-column:1; grid-row:1; }
+  .getstarted-content > p:first-of-type { grid-column:1; grid-row:2; margin-left:0; margin-right:0; margin-bottom:clamp(48px, 10vh, 80px); }
+  .getstarted-content > .getstarted-logo { grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:end; width:clamp(80px, min(12vw, 24vh), 128px); max-width:none; margin:0 0 clamp(48px, 10vh, 80px); }
+  .getstarted-content > .getstarted-primary,
+  .getstarted-content > .getstarted-secondary,
+  .getstarted-content > .getstarted-guest,
+  .getstarted-content > .getstarted-a11y { width:100%; max-width:424px; justify-self:center; }
+}
