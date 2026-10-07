@@ -330,6 +330,8 @@ export default function StoryScenePage() {
       </div>
       <div className="story-scene-avatar">
         <img
+          key={dialogueKey}
+          className="story-scene-mascot"
           src="/ai-for-all/Story-Ai-Mascot.png"
           alt=""
           aria-hidden="true"
@@ -345,7 +347,12 @@ export default function StoryScenePage() {
       </div>
       {step === 'scene' && currentScene && !isTyping && (
         <>
-          <div className="story-scene-bubble">{currentScene.body}</div>
+          <div className="story-scene-bubble">
+            <span className="story-scene-tag">
+              Scene {sceneIndex + 1} of {story.scenes.length}
+            </span>
+            {currentScene.body}
+          </div>
           <div className="story-scene-choices">
             {(currentScene.choices || []).slice(0, 2).map((choice, i) => (
               <button
@@ -354,7 +361,8 @@ export default function StoryScenePage() {
                 className="choice-button"
                 onClick={() => choose(choice.weight)}
               >
-                {choice.label}
+                <span>{choice.label}</span>
+                <ChevronRight size={18} aria-hidden="true" className="choice-button-arrow" />
               </button>
             ))}
           </div>
