@@ -251,7 +251,8 @@ export default function HomePage() {
           {/* Greeting */}
           {displayName && (
             <p className="home-greeting">
-              Hi, <strong>{displayName}!</strong>
+              Welcome back, <strong>{displayName}</strong>!
+              <small>Ready for your next AI story?</small>
             </p>
           )}
 

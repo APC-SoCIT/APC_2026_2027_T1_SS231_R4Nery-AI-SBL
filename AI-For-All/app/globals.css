@@ -5261,3 +5261,21 @@ a.admin-primary {
   .archive-stack-list--scroll .archive-stack-card { transform:none; }
   .archive-stack-card { transition:none; }
 }
+
+/* ===== Select Story: completed label ===== */
+.story-card-completed { position:relative; z-index:1; display:inline-flex; align-items:center; gap:6px; align-self:flex-start; margin-top:10px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.92); color:var(--apc-navy-deep); font-size:12px; font-weight:800; line-height:1.2; }
+.stories-completed-note { margin:6px auto 0; max-width:340px; padding:0 24px; text-align:center; color:var(--apc-navy-deep); font-size:12px; font-weight:700; }
+
+/* ===== Sign In / Sign Up: show password toggle ===== */
+.authpage-pw-wrap { position:relative; margin-bottom:14px; }
+.authpage-pw-wrap .authpage-field { margin-bottom:0; padding-right:54px; }
+.authpage-pw-wrap input::-ms-reveal,
+.authpage-pw-wrap input::-ms-clear { display:none; }
+.authpage-pw-eye { position:absolute; top:50%; right:10px; transform:translateY(-50%); display:grid; place-items:center; width:38px; height:38px; padding:0; border-radius:10px; background:transparent; color:rgba(255,255,255,.9); }
+.authpage-signin .authpage-pw-eye { color:var(--apc-navy-deep); opacity:.7; }
+.authpage-pw-eye:hover { opacity:1; }
+.authpage-pw-eye:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+
+/* ===== Home: greeting ===== */
+.home-greeting { margin:0 0 14px; font-size:18px; line-height:1.3; color:var(--apc-navy-deep); }
+.home-greeting small { display:block; margin-top:2px; font-size:13px; font-weight:600; color:var(--muted); }

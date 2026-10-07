@@ -8,6 +8,7 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
 import { createClient } from '@/lib/supabase/client'
 import { mockSignUp, shouldUseMockAuth } from '@/lib/mock-auth'
@@ -52,6 +53,8 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -187,15 +190,26 @@ export default function SignUpPage() {
         <label className="sr-only" htmlFor="signup-password">
           Password
         </label>
-        <input
-          id="signup-password"
-          className={`authpage-field${!passwordValid ? ' authpage-field--error' : ''}`}
-          type="password"
-          placeholder="Password (8+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-        />
+        <div className="authpage-pw-wrap">
+          <input
+            id="signup-password"
+            className={`authpage-field${!passwordValid ? ' authpage-field--error' : ''}`}
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Password (8+ characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            className="authpage-pw-eye"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-controls="signup-password"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         <p className="authpage-password-hint">
           8+ characters, letters and numbers only (no symbols or spaces).
         </p>
@@ -208,15 +222,26 @@ export default function SignUpPage() {
         <label className="sr-only" htmlFor="signup-confirm-password">
           Confirm Password
         </label>
-        <input
-          id="signup-confirm-password"
-          className={`authpage-field${!passwordsMatch ? ' authpage-field--error' : ''}`}
-          type="password"
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          autoComplete="new-password"
-        />
+        <div className="authpage-pw-wrap">
+          <input
+            id="signup-confirm-password"
+            className={`authpage-field${!passwordsMatch ? ' authpage-field--error' : ''}`}
+            type={showConfirmPassword ? 'text' : 'password'}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            className="authpage-pw-eye"
+            onClick={() => setShowConfirmPassword((v) => !v)}
+            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            aria-controls="signup-confirm-password"
+          >
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         {!passwordsMatch && (
           <p className="authpage-field-hint" role="alert">Passwords don&apos;t match.</p>
         )}
