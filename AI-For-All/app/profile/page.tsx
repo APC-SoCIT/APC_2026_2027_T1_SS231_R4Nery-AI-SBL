@@ -16,11 +16,12 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowLeft, Check, ChevronRight,
-  LogOut, Settings, UserRound, Lock, PowerOff, Eye, EyeOff,
+  LogOut, Settings, UserRound, Lock, PowerOff, Eye, EyeOff, Sparkles,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
+import { topicColor } from '@/lib/topics'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ export default function ProfileHubPage() {
   const [view, setView] = useState<View>('main')
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [interests, setInterests] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   // Profile Details state
@@ -103,10 +105,11 @@ export default function ProfileHubPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [profileRes, progressRes, avatarRes] = await Promise.all([
+        const [profileRes, progressRes, avatarRes, interestsRes] = await Promise.all([
           fetch('/api/account/profile'),
           fetch('/api/progress'),
           fetch('/api/account/avatar'),
+          fetch('/api/account/interests'),
         ])
 
         if (profileRes.status === 401) {
@@ -136,6 +139,11 @@ export default function ProfileHubPage() {
         if (progressRes.ok) {
           const prog = await progressRes.json()
           setProgress({ completedModules: prog.completedModules ?? [] })
+        }
+
+        if (interestsRes.ok) {
+          const intData = await interestsRes.json()
+          setInterests(intData.interests ?? [])
         }
       } catch (err: any) {
         toast.error(err.message ?? 'Failed to load profile.')
@@ -670,6 +678,31 @@ export default function ProfileHubPage() {
           <span>Goals</span>
         </div>
       </div>
+
+      {/* ── Interests card ─────────────────────────────────────────────── */}
+      {interests.length > 0 && (
+        <div className="prof-interests-card">
+          <p className="prof-interests-label">
+            <Sparkles size={13} />
+            My Interests
+          </p>
+          <div className="prof-interests-chips">
+            {interests.map(topic => {
+              const color = topicColor(topic)
+              return (
+                <span
+                  key={topic}
+                  className="prof-interest-chip"
+                  style={{ '--ic-color': color } as React.CSSProperties}
+                >
+                  <span className="prof-interest-dot" aria-hidden="true" />
+                  {topic}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Menu card ─────────────────────────────────────────────────── */}
       <div className="prof-menu-card" role="navigation" aria-label="Profile navigation">

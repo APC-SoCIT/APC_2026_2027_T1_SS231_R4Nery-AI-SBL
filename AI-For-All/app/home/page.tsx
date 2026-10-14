@@ -8,6 +8,7 @@ import { useSession } from '@/lib/sessionContext'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
 import { createClient } from '@/lib/supabase/client'
 import { PENDING_STORY_KEY } from '@/app/stories/[storyId]/page'
+import { InterestPickerModal } from '@/components/ui/InterestPickerModal'
 
 type Snap = 'hero' | 'default' | 'expanded'
 const SNAP_TOP: Record<Snap, number> = { hero: 60, default: 40, expanded: 10 }
@@ -63,6 +64,7 @@ export default function HomePage() {
   const [allStories, setAllStories] = useState<StoryInfo[]>([])
   const [progressLoading, setProgressLoading] = useState(true)
   const [displayName, setDisplayName] = useState<string>('')
+  const [showInterestPicker, setShowInterestPicker] = useState(false)
 
   const [snap, setSnap] = useState<Snap>('default')
   const [dragTop, setDragTop] = useState<number | null>(null)
@@ -111,6 +113,26 @@ export default function HomePage() {
     }).finally(() => {
       try { localStorage.removeItem(PENDING_STORY_KEY) } catch { /* ignore */ }
     })
+  }, [session, sessionLoading])
+
+  // ── Show interest picker if new user has no interests set ─────────────────
+  useEffect(() => {
+    if (sessionLoading || !session || session.isGuest) return
+    let cancelled = false
+    fetch('/api/account/interests')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        const interests: string[] = data?.interests ?? []
+        if (interests.length === 0) {
+          // Small delay so the page has a moment to settle before the popup appears
+          setTimeout(() => {
+            if (!cancelled) setShowInterestPicker(true)
+          }, 800)
+        }
+      })
+      .catch(() => { /* non-fatal */ })
+    return () => { cancelled = true }
   }, [session, sessionLoading])
 
   // ── Fetch real per-user progress ───────────────────────────────────────────
@@ -220,6 +242,10 @@ export default function HomePage() {
 
   return (
     <main className="home-page">
+      <InterestPickerModal
+        open={showInterestPicker}
+        onComplete={() => setShowInterestPicker(false)}
+      />
       <div
         className="home-hero"
         style={{ transform: `scale(${heroTitleScale})`, transformOrigin: 'center bottom', transition: dragTop === null ? 'transform .28s cubic-bezier(.2,.8,.2,1)' : 'none' }}

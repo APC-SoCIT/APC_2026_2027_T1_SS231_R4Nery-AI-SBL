@@ -4652,6 +4652,55 @@ a.admin-primary {
 .prof-avatar-option-check { position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,31,63,.45); color:#fff; border-radius:50%; }
 @media (min-width:900px) { .prof-hero, .prof-sub-hero { padding:24px 40px 72px; }.prof-hero-back, .prof-sub-back { left:0; }.prof-hero-bar, .prof-sub-hero-bar { max-width:1100px; margin:0 auto; } }
 
+/* Profile — interests card */
+.prof-interests-card {
+  width: calc(100% - 40px);
+  max-width: 520px;
+  margin: 0 auto 16px;
+  padding: 18px 20px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.prof-interests-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.prof-interests-label svg { color: #818cf8; }
+.prof-interests-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prof-interest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--ic-color) 12%, white);
+  color: color-mix(in srgb, var(--ic-color) 80%, #1e293b);
+  border: 1.5px solid color-mix(in srgb, var(--ic-color) 28%, transparent);
+  transition: transform .15s, box-shadow .15s;
+}
+.prof-interest-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 12px color-mix(in srgb, var(--ic-color) 22%, transparent); }
+.prof-interest-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ic-color);
+  flex-shrink: 0;
+}
+
 .authpage-password-hint { margin:-8px 0 12px; font-size:11px; line-height:1.4; opacity:.9; }
 .authpage-signup .authpage-password-hint { color:rgba(255,255,255,.85); }
 .authpage-signin .authpage-password-hint { color:var(--apc-navy-deep); opacity:.75; }
