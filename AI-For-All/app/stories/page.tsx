@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2 } from 'lucide-react'
 import { fetchAllStories } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
@@ -225,9 +225,6 @@ export default function StoriesPage() {
               >
                 <div className="story-card-top">
                   <strong>{story.title}</strong>
-                  <span className="story-card-arrow">
-                    <ArrowRight size={15} />
-                  </span>
                 </div>
                 {completedIds.has(story.id) && (
                   <span className="story-card-completed">
