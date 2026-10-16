@@ -1566,6 +1566,18 @@ a.admin-primary {
   font-size: 12px;
 }
 
+.getstarted-about-link {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--apc-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin-top: 6px;
+}
+.getstarted-about-link:hover { opacity: .75; }
+
 .getstarted-mascot {
   position: relative;
   height: clamp(220px, 40vh, 300px);
