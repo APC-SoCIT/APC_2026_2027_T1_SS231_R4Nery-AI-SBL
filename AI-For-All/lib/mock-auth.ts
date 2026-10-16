@@ -8,6 +8,7 @@ const MOCK_ACCOUNTS: MockAccount[] = [
 ]
 
 const STORAGE_KEY = 'ai-for-all:mock-session'
+const PASSWORD_OVERRIDES_KEY = 'ai-for-all:mock-passwords'
 
 export function isMockEmail(email: string): boolean {
   // When Supabase is configured, these accounts exist as real auth users — don't mock them
@@ -26,11 +27,32 @@ export function shouldUseMockAuth(): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host.startsWith('localhost.')
 }
 
+/** Read any password overrides stored in localStorage */
+function getPasswordOverrides(): Record<string, string> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(PASSWORD_OVERRIDES_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function mockSignIn(email: string, password: string): { ok: true; user: MockUser } | { ok: false; error: string } {
+  const normalized = email.trim().toLowerCase()
   const match = MOCK_ACCOUNTS.find(
-    (a) => a.email.toLowerCase() === email.trim().toLowerCase() && a.password === password
+    (a) => a.email.toLowerCase() === normalized
   )
   if (!match) return { ok: false, error: 'Email or password is incorrect.' }
+
+  // Check localStorage override first, fall back to default hardcoded password
+  const overrides = getPasswordOverrides()
+  const effectivePassword = overrides[normalized] ?? match.password
+
+  if (effectivePassword !== password) {
+    return { ok: false, error: 'Email or password is incorrect.' }
+  }
+
   const user: MockUser = { name: match.name, email: match.email, role: match.role }
   if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
   return { ok: true, user }
@@ -47,8 +69,21 @@ export function mockSignUp(name: string, email: string, password: string): { ok:
 
 export function getMockSession(): MockUser | null {
   if (typeof window === 'undefined') return null
+  // If we shouldn't use mock auth (e.g. Supabase is configured), clear any stale session
+  if (!shouldUseMockAuth() && !isMockEmail(getMockEmailSafely())) {
+    clearMockSession()
+    return null
+  }
   const raw = window.localStorage.getItem(STORAGE_KEY)
   return raw ? (JSON.parse(raw) as MockUser) : null
+}
+
+function getMockEmailSafely(): string {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (raw) return (JSON.parse(raw) as MockUser).email || ''
+  } catch {}
+  return ''
 }
 
 export function updateMockSession(updates: Partial<MockUser>): MockUser | null {
@@ -64,4 +99,15 @@ export function updateMockSession(updates: Partial<MockUser>): MockUser | null {
 
 export function clearMockSession() {
   if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY)
+}
+
+/** Persist a new password for a mock account so future logins use it. */
+export function updateMockPassword(newPassword: string): boolean {
+  if (typeof window === 'undefined') return false
+  const session = getMockSession()
+  if (!session) return false
+  const overrides = getPasswordOverrides()
+  overrides[session.email.toLowerCase()] = newPassword
+  window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides))
+  return true
 }

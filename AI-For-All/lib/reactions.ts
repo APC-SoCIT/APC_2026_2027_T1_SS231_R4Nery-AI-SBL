@@ -1,7 +1,7 @@
 /**
  * lib/reactions.ts
  *
- * Reaction options shown on the Story Reaction ("Check-in time") screen.
+ * Reaction options shown on the Story Reaction ("How was the Story") screen.
  *
  * `value` is what gets stored in public.story_reactions.reaction and must
  * stay in sync with the CHECK constraint in supabase-story-reactions.sql.

@@ -1566,6 +1566,18 @@ a.admin-primary {
   font-size: 12px;
 }
 
+.getstarted-about-link {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--apc-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin-top: 6px;
+}
+.getstarted-about-link:hover { opacity: .75; }
+
 .getstarted-mascot {
   position: relative;
   height: clamp(220px, 40vh, 300px);
@@ -1835,6 +1847,126 @@ a.admin-primary {
   background: var(--apc-yellow);
   color: var(--apc-navy-deep);
 }
+
+/* ── Check-email confirmation page ─────────────────────────────────────────── */
+
+.check-email-body {
+  gap: 12px;
+}
+
+.check-email-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 2px;
+}
+
+.check-email-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.check-email-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-addr {
+  color: #fff;
+  word-break: break-all;
+}
+
+.check-email-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-sent {
+  font-size: 13px;
+  color: #b5f0b0;
+  text-align: center;
+  font-weight: 700;
+  margin: 0;
+}
+
+.check-email-resend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, opacity 0.18s;
+}
+
+.check-email-resend:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.check-email-resend:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.check-email-signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.check-email-signin-divider::before,
+.check-email-signin-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.check-email-signin-divider span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.check-email-signin-btn {
+  margin-top: 0;
+  text-decoration: none;
+}
+
+.check-email-wrong {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin: 0;
+}
+
+.check-email-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
 
 .profile-setup img {
   display: block;
@@ -4532,6 +4664,55 @@ a.admin-primary {
 .prof-avatar-option-check { position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,31,63,.45); color:#fff; border-radius:50%; }
 @media (min-width:900px) { .prof-hero, .prof-sub-hero { padding:24px 40px 72px; }.prof-hero-back, .prof-sub-back { left:0; }.prof-hero-bar, .prof-sub-hero-bar { max-width:1100px; margin:0 auto; } }
 
+/* Profile — interests card */
+.prof-interests-card {
+  width: calc(100% - 40px);
+  max-width: 520px;
+  margin: 0 auto 16px;
+  padding: 18px 20px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.prof-interests-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.prof-interests-label svg { color: #818cf8; }
+.prof-interests-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prof-interest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--ic-color) 12%, white);
+  color: color-mix(in srgb, var(--ic-color) 80%, #1e293b);
+  border: 1.5px solid color-mix(in srgb, var(--ic-color) 28%, transparent);
+  transition: transform .15s, box-shadow .15s;
+}
+.prof-interest-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 12px color-mix(in srgb, var(--ic-color) 22%, transparent); }
+.prof-interest-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ic-color);
+  flex-shrink: 0;
+}
+
 .authpage-password-hint { margin:-8px 0 12px; font-size:11px; line-height:1.4; opacity:.9; }
 .authpage-signup .authpage-password-hint { color:rgba(255,255,255,.85); }
 .authpage-signin .authpage-password-hint { color:var(--apc-navy-deep); opacity:.75; }
@@ -4601,8 +4782,7 @@ a.admin-primary {
 /* Task 7B: Story Session choices sit at the bottom of the page (in normal flow, so they stay reachable on short screens) */
 .story-session-layout { display:flex; flex-direction:column; padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px)); }
 .story-session-layout > .story-scene-avatar { margin-top:0; }
-.story-session-layout > .story-scene-choices { margin-top:auto; padding-top:16px; margin-bottom:0; }
-
+.story-session-layout > .story-scene-choices { margin-top:clamp(8px, 2vh, 20px); padding-top:0; margin-bottom:0; }
 /* Home, Story Selection, Splash Screen, and Story Session UI Updates */
 
 /* Home: larger title + subtitle (scaled together as one group via .home-hero), sitting a little lower */
@@ -4873,3 +5053,290 @@ a.admin-primary {
     padding: 24px 20px;
   }
 }
+
+/* ── Password strength checklist ──────────────────────── */
+.settings-pw-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -6px 0 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8f9fb;
+  border: 1.5px solid var(--line);
+}
+
+.settings-pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: color .2s;
+}
+
+.settings-pw-rule--pass {
+  color: #059669;
+}
+
+.settings-pw-rule--fail {
+  color: #dc2626;
+}
+
+.settings-pw-rule--pass svg {
+  flex-shrink: 0;
+  color: #059669;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .archive-stack-card { transition:none; }
+}
+
+/* Sign Up Confirmation Accessibility Updates */
+
+/* Layout: heading, then [mail badge | message + spam hint], then resend, then wrong-email link */
+.authpage-body.check-email-body { display:grid; grid-template-columns:auto minmax(0, 1fr); column-gap:14px; align-content:start; color:#fff; }
+.check-email-body > * { grid-column:1 / -1; }
+.check-email-body > h2 { grid-row:1; margin-bottom:clamp(18px, 3vh, 24px); }
+.check-email-body > .check-email-icon-wrap { grid-column:1; grid-row:2 / span 2; align-self:start; }
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { grid-column:2; max-width:60ch; }
+
+/* Mail badge: Sign Up navy with APC yellow icon (decorative, aria-hidden in markup) */
+.check-email-icon { display:grid; place-items:center; width:clamp(44px, 12vw, 52px); height:clamp(44px, 12vw, 52px); border-radius:16px; background:var(--apc-navy-deep); color:var(--apc-yellow); }
+.check-email-icon svg { width:52%; height:52%; }
+
+/* Text on APC blue: white (about 7.6:1) and near-white (about 6.3:1), both above WCAG AA 4.5:1 */
+.check-email-desc { margin:0 0 8px; font-size:15px; line-height:1.55; color:#fff; }
+.check-email-desc strong { color:#fff; font-weight:800; }
+.check-email-addr { overflow-wrap:anywhere; }
+.check-email-hint { margin:0; font-size:14px; line-height:1.5; color:rgba(255, 255, 255, .88); }
+.check-email-sent { margin:16px 0 0; font-size:14px; font-weight:700; color:#d4f8d2; }
+.check-email-body > .authpage-error { margin:16px 0 0; font-size:13px; }
+
+/* Resend: full-size, touch-friendly outlined button (same 16px radius as the Sign Up submit) */
+.check-email-resend { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; max-width:480px; min-height:52px; margin-top:clamp(20px, 4vh, 28px); padding:0 20px; border:2px solid rgba(255, 255, 255, .9); border-radius:16px; background:transparent; color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:background .15s; }
+.check-email-resend:hover:not(:disabled) { background:rgba(255, 255, 255, .12); }
+.check-email-resend:disabled { opacity:.65; cursor:default; }
+.check-email-resend .spin { animation:check-email-spin 1s linear infinite; }
+@keyframes check-email-spin { to { transform:rotate(360deg); } }
+
+/* Wrong email: centered under the button, link with a larger tap area */
+.check-email-wrong { max-width:480px; margin:clamp(12px, 2.5vh, 18px) 0 0; text-align:center; font-size:14px; color:rgba(255, 255, 255, .88); }
+.check-email-link { display:inline-block; padding:10px 2px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+
+/* Visible keyboard focus (WCAG 2.4.7) */
+.check-email-resend:focus-visible,
+.check-email-link:focus-visible { outline:3px solid var(--apc-yellow); outline-offset:3px; }
+
+@media (prefers-reduced-motion:reduce) {
+  .check-email-resend .spin { animation:none; }
+}
+
+/* Sign Up Confirmation Centered Layout */
+
+/* Center the whole content group horizontally, and vertically in the blue area below the header.
+   `safe` keeps the top visible on short screens instead of pushing it out of view. */
+.authpage-body.check-email-body { grid-template-columns:auto minmax(0, 440px); justify-content:center; align-content:safe center; }
+
+/* Heading, feedback messages, button and wrong-email line centered within the group */
+.check-email-body > h2,
+.check-email-body > .check-email-sent,
+.check-email-body > .authpage-error,
+.check-email-body > .check-email-wrong { text-align:center; }
+.check-email-body > .check-email-resend,
+.check-email-body > .check-email-wrong { justify-self:center; }
+
+/* Sign Up Confirmation Text Layout Fix */
+
+/* Sign Up Confirmation Vertical Position Fix */
+
+/* Sign Up Confirmation Text and Icon Alignment Fix */
+
+/* Icon column locked to the badge size; text column sizes to its content up to 560px (was capped at 400px, which forced the email and the
+   "Confirm my email" sentence to wrap). Small fixed gap keeps the icon directly beside the message; the row stays centered. */
+.authpage-body.check-email-body { grid-template-columns:clamp(44px, 12vw, 52px) fit-content(560px); column-gap:12px; }
+.check-email-body > .check-email-icon-wrap { justify-self:start; }
+
+/* Heading: one line whenever it fits; only wraps on genuinely narrow screens */
+.check-email-body > h2 { text-wrap:balance; }
+
+/* More breathing room above Resend (button width unchanged: same 468px desktop cap, full width on phones) */
+.check-email-body > .check-email-resend { margin-top:clamp(36px, 6vh, 52px); max-width:468px; }
+
+/* Start the whole group near the top of the blue area (replaces the vertical centering), with a responsive gap below the mascot section.
+   Icon column is fixed to the badge size so the envelope sits right beside the text. */
+.authpage-body.check-email-body { align-content:start; padding-top:clamp(24px, 5vh, 44px); grid-template-columns:clamp(44px, 12vw, 52px) minmax(0, 400px); }
+
+/* Narrower text column (about 50-55 characters per line) so sentences wrap evenly; the group stays centered */
+.authpage-body.check-email-body { grid-template-columns:auto minmax(0, 400px); column-gap:clamp(12px, 3.5vw, 16px); }
+
+/* Heading: centered, slightly tighter, closer to the text block */
+.check-email-body > h2 { line-height:1.12; margin-bottom:clamp(16px, 2.5vh, 22px); }
+
+/* Icon pinned to the top of the text block, aligned with the first line */
+.check-email-body > .check-email-icon-wrap { align-self:start; margin-top:2px; }
+
+/* Message + spam note read as one short paragraph: same size and line-height, small consistent gap */
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { max-width:none; font-size:15px; line-height:1.6; text-align:left; }
+.check-email-body > .check-email-desc { margin:0; }
+.check-email-body > .check-email-hint { margin:6px 0 0; }
+
+/* Clear but connected gap before the resend action */
+.check-email-body > .check-email-resend { margin-top:clamp(24px, 4vh, 32px); }
+
+/* Secondary action: close under the button (the link's 10px tap padding adds the rest) */
+.check-email-body > .check-email-wrong { margin-top:clamp(8px, 1.5vh, 12px); }
+
+/* Sign Up Confirmation Page Layout (consolidated) */
+.authpage-body.check-email-body { display:grid; grid-template-columns:clamp(44px, 12vw, 52px) fit-content(560px); column-gap:12px; justify-content:center; align-content:start; padding-top:clamp(24px, 5vh, 44px); color:#fff; }
+.check-email-body > * { grid-column:1 / -1; }
+.check-email-body > h2 { grid-row:1; margin-bottom:clamp(16px, 2.5vh, 22px); line-height:1.12; text-align:center; text-wrap:balance; }
+.check-email-body > .check-email-icon-wrap { grid-column:1; grid-row:2 / span 2; align-self:start; justify-self:start; margin-top:2px; }
+.check-email-body > .check-email-desc,
+.check-email-body > .check-email-hint { grid-column:2; font-size:15px; line-height:1.6; text-align:left; }
+.check-email-body > .check-email-desc { margin:0; color:#fff; }
+.check-email-body > .check-email-hint { margin:6px 0 0; color:rgba(255, 255, 255, .88); }
+.check-email-desc strong { color:#fff; font-weight:800; }
+.check-email-addr { overflow-wrap:anywhere; }
+.check-email-icon { display:grid; place-items:center; width:clamp(44px, 12vw, 52px); height:clamp(44px, 12vw, 52px); border-radius:16px; background:var(--apc-navy-deep); color:var(--apc-yellow); }
+.check-email-icon svg { width:52%; height:52%; }
+.check-email-body > .check-email-sent { margin:16px 0 0; font-size:14px; font-weight:700; color:#d4f8d2; text-align:center; }
+.check-email-body > .authpage-error { margin:16px 0 0; font-size:13px; text-align:center; }
+.check-email-body > .check-email-resend { display:flex; align-items:center; justify-content:center; justify-self:center; gap:8px; width:100%; max-width:468px; min-height:52px; margin-top:clamp(36px, 6vh, 52px); padding:0 20px; border:2px solid rgba(255, 255, 255, .9); border-radius:16px; background:transparent; color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:background .15s; }
+.check-email-resend:hover:not(:disabled) { background:rgba(255, 255, 255, .12); }
+.check-email-resend:disabled { opacity:.65; cursor:default; }
+.check-email-resend .spin { animation:check-email-spin 1s linear infinite; }
+@keyframes check-email-spin { to { transform:rotate(360deg); } }
+.check-email-body > .check-email-wrong { justify-self:center; max-width:480px; margin:clamp(8px, 1.5vh, 12px) 0 0; text-align:center; font-size:14px; color:rgba(255, 255, 255, .88); }
+.check-email-link { display:inline-block; padding:10px 2px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.check-email-resend:focus-visible,
+.check-email-link:focus-visible { outline:3px solid var(--apc-yellow); outline-offset:3px; }
+@media (prefers-reduced-motion:reduce) {
+  .check-email-resend .spin { animation:none; }
+}
+.settings-pw-rule--fail svg {
+  flex-shrink: 0;
+  color: #dc2626;
+  opacity: .65;
+}
+
+/* Story Session: comic-style scene look (reference image), per-scene animations, scene number tag, exit button on the right */
+.story-session-layout { --story-accent:var(--apc-navy-deep); --story-accent-hover:var(--apc-blue); --story-tag:var(--apc-yellow); --story-tag-text:var(--apc-navy-deep); }
+.story-scene-header .story-scene-exit { margin-left:auto; }
+.story-scene-header strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Speech bubble with a bold outline and a name-tag style scene label */
+.story-session-layout .story-scene-bubble { border:2.5px solid var(--story-accent); box-shadow:0 5px 0 rgba(0,26,93,.12); animation:story-bubble-pop .38s cubic-bezier(.34,1.56,.64,1) backwards; transform-origin:50% 0; }
+.story-session-layout > .story-scene-avatar + .story-scene-bubble::before,
+.story-session-layout > .story-scene-avatar + .story-activity > .story-scene-bubble:first-child::before { top:-10px; border-top:2.5px solid var(--story-accent); border-left:2.5px solid var(--story-accent); }
+.story-session-layout > .story-scene-avatar + .story-scene-bubble:has(.story-scene-tag) { margin-top:24px; padding-top:clamp(20px, 3vw, 26px); }
+.story-scene-tag { position:absolute; top:-15px; left:14px; display:inline-block; padding:4px 12px; border:2px solid var(--story-accent); border-radius:8px; background:var(--story-tag); color:var(--story-tag-text); font-size:12px; font-weight:900; line-height:1.2; letter-spacing:.06em; text-transform:uppercase; transform:rotate(-2deg); box-shadow:0 3px 0 rgba(0,26,93,.15); animation:story-tag-in .4s .12s ease-out backwards; }
+
+/* Solid choice buttons with an inner white border and a chevron, like the reference */
+.story-session-layout .choice-button { min-height:54px; padding:14px 16px 14px 18px; border:2px solid var(--story-accent); border-radius:10px; background:var(--story-accent); color:#fff; font-size:clamp(14px, 0.85rem + 0.3vw, 16px); font-weight:700; line-height:1.35; box-shadow:inset 0 0 0 2px rgba(255,255,255,.85), 0 4px 0 rgba(0,26,93,.18); animation:story-choice-in .36s ease-out backwards; }
+.story-session-layout .choice-button:nth-child(1) { animation-delay:.12s; }
+.story-session-layout .choice-button:nth-child(2) { animation-delay:.22s; }
+.story-session-layout .choice-button:hover { border-color:var(--story-accent-hover); background:var(--story-accent-hover); }
+.story-session-layout .choice-button:active { transform:translateY(2px); box-shadow:inset 0 0 0 2px rgba(255,255,255,.85), 0 2px 0 rgba(0,26,93,.18); }
+.story-session-layout .choice-button:focus-visible { outline:3px solid var(--apc-yellow); outline-offset:2px; }
+.choice-button-arrow { flex:none; transition:transform .18s; }
+.story-session-layout .choice-button:hover .choice-button-arrow { transform:translateX(3px); }
+
+/* Mascot hops in each time a new scene starts */
+.story-scene-mascot { animation:story-mascot-hop .5s ease-out; }
+
+@keyframes story-bubble-pop { 0% { opacity:0; transform:translateY(10px) scale(.88); } 100% { opacity:1; transform:none; } }
+@keyframes story-tag-in { 0% { opacity:0; transform:translateY(-6px) rotate(-8deg); } 100% { opacity:1; transform:rotate(-2deg); } }
+@keyframes story-choice-in { 0% { opacity:0; transform:translateX(28px); } 100% { opacity:1; transform:none; } }
+@keyframes story-mascot-hop { 0% { transform:translateY(0); } 35% { transform:translateY(-12px); } 65% { transform:translateY(2px); } 100% { transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) {
+  .story-session-layout .story-scene-bubble,
+  .story-scene-tag,
+  .story-session-layout .choice-button,
+  .story-scene-mascot { animation:none; }
+}
+
+/* Latest UI Fix for Get Started Page */
+ 
+/* Portrait (phones and tablets): logo above the content, everything centered, group slightly lower */
+.getstarted-content { width:100%; max-width:440px; margin:0 auto; padding-top:clamp(64px, 11vh, 112px); text-align:center; }
+.getstarted-content > p:first-of-type { margin-left:auto; margin-right:auto; }
+.getstarted-content .getstarted-logo { display:block; width:clamp(72px, min(24vw, 12vh), 112px); max-width:100%; height:auto; margin:0 auto clamp(16px, 3vh, 28px); object-fit:contain; }
+ 
+/* Landscape (phone landscape, tablet landscape, laptop, desktop): title + subtitle left, logo right, buttons centered below */
+@media (orientation: landscape) and (min-width: 560px) {
+  .getstarted-content { display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:clamp(32px, 6vw, 96px); align-items:start; max-width:clamp(480px, 62vw, 640px); padding-top:clamp(24px, 7vh, 72px); text-align:left; }
+  .getstarted-content > * { grid-column:1 / -1; }
+  .getstarted-content > h2 { grid-column:1; grid-row:1; }
+  .getstarted-content > p:first-of-type { grid-column:1; grid-row:2; margin-left:0; margin-right:0; margin-bottom:clamp(48px, 10vh, 80px); }
+  .getstarted-content > .getstarted-logo { grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:end; width:clamp(80px, min(12vw, 24vh), 128px); max-width:none; margin:0 0 clamp(48px, 10vh, 80px); }
+  .getstarted-content > .getstarted-primary,
+  .getstarted-content > .getstarted-secondary,
+  .getstarted-content > .getstarted-guest,
+  .getstarted-content > .getstarted-a11y { width:100%; max-width:424px; justify-self:center; }
+}
+
+/* Restored UI: Archive and Story Cleared (lost in merge) */
+
+/* Sign Up: keep the small gap above the terms that the removed Google button row used to provide */
+.authpage-signup .authpage-terms { margin-top:6px; }
+
+/* Story Cleared action rows (Guest + Registered): icon beside its text, button below at full width */
+.story-cleared-card .story-cleared-cta-row { display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; column-gap:12px; row-gap:12px; }
+.story-cleared-card .story-cleared-cta-row > .story-cleared-btn { grid-column:1 / -1; }
+
+/* Archive: wider stack (header widens too so the search bar stays aligned), more space under the search, stack sits lower */
+.archive-header, .archive-body { max-width:680px; }
+.archive-body { padding-top:clamp(32px, 7vh, 64px); }
+.archive-page { padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* Archive: full folder cards (same notched top and 28px overlap; each card extends downward) */
+.archive-stack-list { position:relative; }
+.archive-stack-card { flex-shrink:0; min-height:clamp(150px, 21vh, 200px); }
+
+/* Archive with 1 or 2 stories: larger folders, centered between the search and the navbar */
+.archive-stack-list--few { margin:auto; width:100%; max-width:480px; }
+.archive-stack-list--few .archive-stack-card { min-height:clamp(190px, 30vh, 280px); }
+
+/* Archive with 3+ stories: the stack scrolls on its own between the header and the navbar (tall enough screens only) */
+@media (min-height: 560px) {
+  .archive-page--stack-scroll { height:100dvh; }
+  .archive-page--stack-scroll .archive-body { min-height:0; }
+  .archive-stack-list--scroll { flex:0 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-left:-8px; margin-right:-8px; padding:16px 8px 8px; cursor:grab; user-select:none; -webkit-user-select:none;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%);
+            mask-image:linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 12px), transparent 100%); }
+  .archive-stack-list--scroll::-webkit-scrollbar { display:none; }
+  .archive-stack-list--scroll.is-dragging { cursor:grabbing; }
+  /* Wheel feel: cards away from the middle shrink up to 5%; the open card stays full size */
+  .archive-stack-list--scroll .archive-stack-card { transform:scale(calc(1 - var(--wheel, 0) * .05)); will-change:transform; }
+  .archive-stack-list--scroll .archive-stack-card.expanded { transform:none; }
+}
+
+/* Archive folder opening lift: the open folder moves slightly up and eases back on close (never fixed or sticky) */
+.archive-stack-card { translate:0 0; transition:translate .32s cubic-bezier(.2, .8, .2, 1); }
+.archive-stack-card.expanded { translate:0 calc(-1 * clamp(6px, 1.2vh, 10px)); }
+
+@media (prefers-reduced-motion:reduce) {
+  .archive-stack-list--scroll .archive-stack-card { transform:none; }
+  .archive-stack-card { transition:none; }
+}
+
+/* ===== Select Story: completed label ===== */
+.story-card-completed { position:relative; z-index:1; display:inline-flex; align-items:center; gap:6px; align-self:flex-start; margin-top:10px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.92); color:var(--apc-navy-deep); font-size:12px; font-weight:800; line-height:1.2; }
+.stories-completed-note { margin:6px auto 0; max-width:340px; padding:0 24px; text-align:center; color:var(--apc-navy-deep); font-size:12px; font-weight:700; }
+
+/* ===== Sign In / Sign Up: show password toggle ===== */
+.authpage-pw-wrap { position:relative; margin-bottom:14px; }
+.authpage-pw-wrap .authpage-field { margin-bottom:0; padding-right:54px; }
+.authpage-pw-wrap input::-ms-reveal,
+.authpage-pw-wrap input::-ms-clear { display:none; }
+.authpage-pw-eye { position:absolute; top:50%; right:10px; transform:translateY(-50%); display:grid; place-items:center; width:38px; height:38px; padding:0; border-radius:10px; background:transparent; color:rgba(255,255,255,.9); }
+.authpage-signin .authpage-pw-eye { color:var(--apc-navy-deep); opacity:.7; }
+.authpage-pw-eye:hover { opacity:1; }
+.authpage-pw-eye:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+
+/* ===== Home: greeting ===== */
+.home-greeting { margin:0 0 14px; font-size:18px; line-height:1.3; color:var(--apc-navy-deep); }
+.home-greeting small { display:block; margin-top:2px; font-size:13px; font-weight:600; color:var(--muted); }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2 } from 'lucide-react'
 import { fetchAllStories } from '@/lib/supabase/stories'
 import { StoryModule } from '@/lib/story-data'
 import { getMockSession } from '@/lib/mock-auth'
@@ -18,7 +18,9 @@ const FALLBACK_MASCOTS = [
   '/ai-for-all/Story-Page-Mascot-2.png',
   '/ai-for-all/Story-Page-Mascot-3.png',
 ]
-const FALLBACK_COLORS = ['#6f8ce8', '#ff7a45', '#66cf9e', '#8dcdf4', '#c8ccff']
+// Story card palette, assigned by card position so neighbouring cards never share a colour.
+// Also used by the Archive page (app/archive/page.tsx) so both pages follow the same sequence.
+export const FALLBACK_COLORS = ['#6f8ce8', '#ff7a45', '#66cf9e', '#8dcdf4', '#c8ccff']
 
 type StoryCard = {
   id: string
@@ -39,7 +41,7 @@ function toCard(story: StoryModule, index: number): StoryCard {
   return {
     id: story.id,
     title: story.title,
-    color: story.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+    color: FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     bullets: bullets.length > 0 ? bullets : [story.description || story.category],
     mascot: FALLBACK_MASCOTS[index % FALLBACK_MASCOTS.length],
   }
@@ -53,6 +55,7 @@ export default function StoriesPage() {
   const [active, setActive] = useState(0)
   const [cards, setCards] = useState<StoryCard[]>([])
   const [loading, setLoading] = useState(true)
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
 
   // Load published stories from Supabase.
   useEffect(() => {
@@ -161,6 +164,28 @@ export default function StoriesPage() {
   const isRegistered = !!authSession && !authSession.isGuest
   const backHref = session || isRegistered ? '/home' : '/get-started'
 
+  // Registered users: load completed stories (same source as Home and Archive)
+  // so already finished stories can be marked on their cards.
+  useEffect(() => {
+    if (!isRegistered) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/progress')
+        if (!res.ok) return
+        const data: { completedModules?: string[] } = await res.json()
+        if (!cancelled) setCompletedIds(new Set(data.completedModules ?? []))
+      } catch {
+        // Non-fatal: cards simply show without the completed label
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isRegistered])
+
+  const activeCompleted = !!cards[active] && completedIds.has(cards[active].id)
+
   return (
     <main className="stories-page">
       <Link href={backHref} className="stories-back" aria-label="Go back">
@@ -200,10 +225,12 @@ export default function StoriesPage() {
               >
                 <div className="story-card-top">
                   <strong>{story.title}</strong>
-                  <span className="story-card-arrow">
-                    <ArrowRight size={15} />
-                  </span>
                 </div>
+                {completedIds.has(story.id) && (
+                  <span className="story-card-completed">
+                    <CheckCircle2 size={13} /> Completed
+                  </span>
+                )}
                 <ul className="story-card-bullets">
                   {story.bullets.map((bullet) => (
                     <li key={bullet}>
@@ -217,6 +244,11 @@ export default function StoriesPage() {
           </div>
 
           <p className="stories-selected">Selected: {cards[active]?.title}</p>
+          {activeCompleted && (
+            <p className="stories-completed-note">
+              You have already completed this story. You can still play it again anytime.
+            </p>
+          )}
 
           <button type="button" className="stories-cta" onClick={playActive}>
             Play this story

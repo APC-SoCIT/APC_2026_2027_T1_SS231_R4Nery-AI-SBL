@@ -6,9 +6,10 @@
  * Auth method: email + password.
  * Google OAuth remains available as an alternative.
  */
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { AuthMascotHeader } from '@/components/auth/auth-mascot-header'
 import { GoogleIcon } from '@/components/auth/social-icons'
 import { createClient } from '@/lib/supabase/client'
@@ -54,8 +55,22 @@ async function flushPendingStoryCompletion() {
 
 export default function SignInPage() {
   const router = useRouter()
+  
+  // If a fresh user signs in, ensure they don't inherit a stale guest story.
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('story_cleared')) {
+        localStorage.removeItem(PENDING_STORY_KEY)
+      } else {
+        // Consume the flag so a subsequent refresh/visit clears it
+        sessionStorage.removeItem('story_cleared')
+      }
+    } catch {}
+  }, [])
+  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -181,15 +196,26 @@ export default function SignInPage() {
         <label className="sr-only" htmlFor="signin-password">
           Password
         </label>
-        <input
-          id="signin-password"
-          className="authpage-field authpage-field-signin"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-        />
+        <div className="authpage-pw-wrap">
+          <input
+            id="signin-password"
+            className="authpage-field authpage-field-signin"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            className="authpage-pw-eye"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-controls="signin-password"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
 
         {error && (
           <p className="authpage-error" role="alert">

@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, User, Mail, Shield, ChevronRight, LogOut, PowerOff } from 'lucide-react'
+import { ArrowLeft, User, Mail, Shield, ChevronRight, LogOut, PowerOff, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -211,6 +211,18 @@ export default function AccountProfilePage() {
         <span className="acct-nav-label">
           <strong>Security</strong>
           <small>Change password or link Google</small>
+        </span>
+        <ChevronRight size={16} color="var(--muted)" />
+      </Link>
+
+      {/* About shortcut */}
+      <Link href="/about" className="acct-nav-row" style={{ marginTop: 10 }}>
+        <span className="acct-nav-icon" style={{ background: 'var(--apc-pale)' }}>
+          <Info size={16} color="var(--apc-navy-deep)" />
+        </span>
+        <span className="acct-nav-label">
+          <strong>About AI for ALL</strong>
+          <small>Meet the team &amp; learn more</small>
         </span>
         <ChevronRight size={16} color="var(--muted)" />
       </Link>

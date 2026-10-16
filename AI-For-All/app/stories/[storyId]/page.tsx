@@ -127,6 +127,7 @@ export default function StoryScenePage() {
         // Store the pending completion so sign-in/sign-up pages can flush it.
         try {
           localStorage.setItem(PENDING_STORY_KEY, story.id)
+          sessionStorage.setItem('story_cleared', 'true')
         } catch {
           // localStorage may be unavailable — non-fatal
         }
@@ -159,7 +160,7 @@ export default function StoryScenePage() {
     )
   }
 
-  // Render the reaction check-in screen (outside the scene layout)
+  // Render the Story Reaction ("How was the Story") screen (outside the scene layout)
   if (step === 'reaction' && story) {
     return <StoryReaction story={story} isGuest={isGuest} onContinue={() => setStep('cleared')} />
   }
@@ -329,6 +330,8 @@ export default function StoryScenePage() {
       </div>
       <div className="story-scene-avatar">
         <img
+          key={dialogueKey}
+          className="story-scene-mascot"
           src="/ai-for-all/Story-Ai-Mascot.png"
           alt=""
           aria-hidden="true"
@@ -344,7 +347,12 @@ export default function StoryScenePage() {
       </div>
       {step === 'scene' && currentScene && !isTyping && (
         <>
-          <div className="story-scene-bubble">{currentScene.body}</div>
+          <div className="story-scene-bubble">
+            <span className="story-scene-tag">
+              Scene {sceneIndex + 1} of {story.scenes.length}
+            </span>
+            {currentScene.body}
+          </div>
           <div className="story-scene-choices">
             {(currentScene.choices || []).slice(0, 2).map((choice, i) => (
               <button
@@ -353,7 +361,8 @@ export default function StoryScenePage() {
                 className="choice-button"
                 onClick={() => choose(choice.weight)}
               >
-                {i + 1}. {choice.label}
+                <span>{choice.label}</span>
+                <ChevronRight size={18} aria-hidden="true" className="choice-button-arrow" />
               </button>
             ))}
           </div>
@@ -483,7 +492,23 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
               </Link>
             </div>
             <div className="story-cleared-divider" />
-            {/* Row 2: Return to Home Screen */}
+            {/* Row 2: IBM SkillsBuild */}
+            {story.skillsBuildUrl && (
+              <>
+                <div className="story-cleared-cta-row">
+                  <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
+                    <BookOpen size={20} />
+                    <Star size={10} className="story-cleared-book-star" />
+                  </div>
+                  <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
+                  <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                    {story.skillsBuildButtonText || 'IBM SkillsBuild'}
+                  </a>
+                </div>
+                <div className="story-cleared-divider" />
+              </>
+            )}
+            {/* Row 3: Return to Home Screen */}
             <div className="story-cleared-cta-row">
               <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
                 <Star size={20} />
@@ -493,20 +518,6 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                 Home Screen
               </Link>
             </div>
-            <div className="story-cleared-divider" />
-            {/* Row 3: IBM SkillsBuild */}
-            {story.skillsBuildUrl && (
-              <div className="story-cleared-cta-row">
-                <div className="story-cleared-cta-icon story-cleared-cta-icon--book">
-                  <BookOpen size={20} />
-                  <Star size={10} className="story-cleared-book-star" />
-                </div>
-                <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
-                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
-                  {story.skillsBuildButtonText || 'IBM SkillsBuild'}
-                </a>
-              </div>
-            )}
           </>
         )}
       </div>

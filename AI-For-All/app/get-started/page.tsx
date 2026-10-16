@@ -71,6 +71,7 @@ export default function GetStartedPage() {
   return (
     <main className="getstarted-page">
       <div className="getstarted-content">
+        <img className="getstarted-logo" src="/APC Logo.png" alt="Asia Pacific College" />
         <h2>
           Let&apos;s get
           <br />
@@ -95,6 +96,9 @@ export default function GetStartedPage() {
         <p className="getstarted-a11y">
           <Accessibility size={14} /> Accessibility and assistance
         </p>
+        <Link href="/about" className="getstarted-about-link">
+          About AI for ALL
+        </Link>
       </div>
       {/* Layered per spec: background → blue circle → swirly asset → Ramsey */}
       <div className="getstarted-mascot" aria-hidden="true">

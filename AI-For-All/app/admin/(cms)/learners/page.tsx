@@ -4,14 +4,15 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Users, Search, X, Check, ChevronDown, ArrowUpAZ, SlidersHorizontal,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  Mail, Shield, UserCircle, Circle, RefreshCw,
+  Mail, Shield, UserCircle, Circle, RefreshCw, BookOpen, Tag,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { topicColor } from '@/lib/topics'
 import toast from 'react-hot-toast'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type Role = 'mallgoer' | 'deactivated' | 'admin'
-type SortKey = 'name-asc' | 'name-desc' | 'role' | 'joined-newest' | 'joined-oldest'
+type SortKey = 'name-asc' | 'name-desc' | 'role' | 'joined-newest' | 'joined-oldest' | 'progress-most' | 'progress-least'
 
 interface Learner {
   user_id: string
@@ -35,8 +36,78 @@ const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
   admin: { bg: '#ece9ff', color: '#6d5fbc' },
 }
 
+// ── Interest topic chips ──────────────────────────────────────────────────
+function InterestChips({ interests }: { interests: string[] }) {
+  if (!interests || interests.length === 0) return null
+  return (
+    <div className="lr-interest-chips">
+      {interests.map(topic => {
+        const color = topicColor(topic)
+        return (
+          <span
+            key={topic}
+            className="lr-interest-chip"
+            style={{
+              '--ic-color': color,
+            } as React.CSSProperties}
+            title={topic}
+          >
+            <span className="lr-interest-dot" aria-hidden="true" />
+            {topic}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+
+function ProgressBar({ completed, total }: { completed: number; total: number }) {
+  const pct = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0
+
+  // Color transitions: red → amber → green
+  const getColor = () => {
+    if (pct === 100) return { track: '#d1fae5', fill: 'linear-gradient(90deg,#34d399,#10b981)', text: '#065f46' }
+    if (pct >= 60)  return { track: '#dbeafe', fill: 'linear-gradient(90deg,#60a5fa,#3b82f6)', text: '#1e40af' }
+    if (pct >= 30)  return { track: '#fef3c7', fill: 'linear-gradient(90deg,#fbbf24,#f59e0b)', text: '#92400e' }
+    return           { track: '#fee2e2', fill: 'linear-gradient(90deg,#f87171,#ef4444)', text: '#991b1b' }
+  }
+
+  const c = getColor()
+
+  return (
+    <div className="lr-progress-wrap">
+      <div className="lr-progress-label" style={{ color: c.text }}>
+        <BookOpen size={10} />
+        <span>{completed}<span className="lr-progress-total">/{total}</span></span>
+        {pct === 100 && <span className="lr-progress-done">✓ Done</span>}
+      </div>
+      <div className="lr-progress-track" style={{ background: c.track }}>
+        <div
+          className="lr-progress-fill"
+          style={{
+            width: `${pct}%`,
+            background: c.fill,
+          }}
+        />
+      </div>
+      <span className="lr-progress-pct" style={{ color: c.text }}>{pct}%</span>
+    </div>
+  )
+}
+
 // ── Learner row ───────────────────────────────────────────────────────────
-function LearnerRow({ learner }: { learner: Learner }) {
+function LearnerRow({
+  learner,
+  completed,
+  total,
+  interests,
+}: {
+  learner: Learner
+  completed: number
+  total: number
+  interests: string[]
+}) {
   const initials = [learner.username?.[0], learner.user_sname?.[0]].filter(Boolean).join('').toUpperCase() || '?'
   const joined = learner.created_at
     ? new Date(learner.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -46,10 +117,14 @@ function LearnerRow({ learner }: { learner: Learner }) {
     <div className="lr-row">
       {/* Avatar */}
       <div className="lr-avatar">{initials}</div>
-      {/* Name + email */}
+      {/* Name + email + interests + progress */}
       <div className="lr-info">
-        <strong>{[learner.username, learner.user_sname].filter(Boolean).join(' ') || 'Unnamed'}</strong>
+        <div className="lr-name-row">
+          <strong>{[learner.username, learner.user_sname].filter(Boolean).join(' ') || 'Unnamed'}</strong>
+          <InterestChips interests={interests} />
+        </div>
         {learner.email && <small><Mail size={11} style={{ marginRight: 3 }} />{learner.email}</small>}
+        <ProgressBar completed={completed} total={total} />
       </div>
       {/* Role badge */}
       <div className="lr-role-col">
@@ -97,6 +172,8 @@ function FilterDropdown({ sort, setSort, roleFilter, setRoleFilter }: {
               ['name-asc', 'Name A → Z'],
               ['name-desc', 'Name Z → A'],
               ['role', 'By Role'],
+              ['progress-most', 'Most Progress'],
+              ['progress-least', 'Least Progress'],
             ] as [SortKey, string][]).map(([val, label]) => (
               <button key={val} className={`lr-filter-opt${sort === val ? ' active' : ''}`} onClick={() => setSort(val)}>
                 {sort === val && <Check size={12} />}{label}
@@ -137,19 +214,36 @@ export default function AdminLearnersPage() {
   const [roleFilter, setRoleFilter] = useState('All')
   const [page, setPage] = useState(1)
 
+  // Progress state
+  const [totalPublished, setTotalPublished] = useState(0)
+  const [progressMap, setProgressMap] = useState<Record<string, number>>({})
+  const [interestsMap, setInterestsMap] = useState<Record<string, string[]>>({})
+
   const load = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('users')
-      .select('user_id, username, user_sname, email, role, created_at')
-      .neq('role', 'admin')
-      .order('created_at', { ascending: false })
 
-    if (error) {
-      toast.error('Failed to load learners: ' + error.message)
+    // Fetch learners + progress in parallel
+    const [usersResult, progressResult] = await Promise.all([
+      supabase
+        .from('users')
+        .select('user_id, username, user_sname, email, role, created_at')
+        .neq('role', 'admin')
+        .order('created_at', { ascending: false }),
+      fetch('/api/admin/learner-progress').then(r => r.json()),
+    ])
+
+    if (usersResult.error) {
+      toast.error('Failed to load learners: ' + usersResult.error.message)
     } else {
-      setLearners((data ?? []) as Learner[])
+      setLearners((usersResult.data ?? []) as Learner[])
     }
+
+    if (progressResult && !progressResult.error) {
+      setTotalPublished(progressResult.totalPublished ?? 0)
+      setProgressMap(progressResult.progress ?? {})
+      setInterestsMap(progressResult.interests ?? {})
+    }
+
     setLoading(false)
   }
 
@@ -173,11 +267,13 @@ export default function AdminLearnersPage() {
         case 'name-desc': return (b.username ?? '').localeCompare(a.username ?? '')
         case 'role': return (a.role ?? '').localeCompare(b.role ?? '')
         case 'joined-oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'progress-most': return (progressMap[b.user_id] ?? 0) - (progressMap[a.user_id] ?? 0)
+        case 'progress-least': return (progressMap[a.user_id] ?? 0) - (progressMap[b.user_id] ?? 0)
         case 'joined-newest':
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       }
     })
-  }, [learners, query, roleFilter, sort])
+  }, [learners, query, roleFilter, sort, progressMap])
 
   // Reset page on filter change
   useMemo(() => setPage(1), [filtered])
@@ -210,6 +306,11 @@ export default function AdminLearnersPage() {
           <strong>{stats.deactivatedCount}</strong>
           <span>Deactivated</span>
         </div>
+        <div className="lr-stat-card">
+          <BookOpen size={18} style={{ color: '#818cf8' }} />
+          <strong>{totalPublished}</strong>
+          <span>Published Stories</span>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -237,7 +338,7 @@ export default function AdminLearnersPage() {
       {!loading && filtered.length > 0 && (
         <div className="lr-col-header">
           <span style={{ flex: '0 0 40px' }} />
-          <span style={{ flex: 1 }}>Name / Email</span>
+          <span style={{ flex: 1 }}>Name / Email / Progress</span>
           <span style={{ flex: '0 0 110px' }}>Role</span>
           <span style={{ flex: '0 0 120px' }}>Joined</span>
         </div>
@@ -254,7 +355,15 @@ export default function AdminLearnersPage() {
             <p>{learners.length === 0 ? 'Learner accounts will appear here once users sign up.' : 'Try adjusting your search or filters.'}</p>
           </div>
         ) : (
-          paginated.map(l => <LearnerRow key={l.user_id} learner={l} />)
+          paginated.map(l => (
+            <LearnerRow
+              key={l.user_id}
+              learner={l}
+              completed={progressMap[l.user_id] ?? 0}
+              total={totalPublished}
+              interests={interestsMap[l.user_id] ?? []}
+            />
+          ))
         )}
       </div>
 
@@ -329,19 +438,43 @@ export default function AdminLearnersPage() {
         .lr-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--white);box-shadow:0 2px 10px rgba(38,48,105,.05);transition:box-shadow .15s}
         .lr-row:hover{box-shadow:0 4px 18px rgba(38,48,105,.09)}
         .lr-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--lavender-deep);color:var(--ink);font-size:13px;font-weight:800;flex-shrink:0}
-        .lr-info{flex:1;min-width:0}
-        .lr-info strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .lr-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+        .lr-name-row{display:flex;align-items:center;gap:8px;min-width:0}
+        .lr-name-row strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:180px}
         .lr-info small{display:flex;align-items:center;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .lr-role-col{flex:0 0 110px;display:flex;align-items:center}
         .lr-role-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
         .lr-joined{flex:0 0 120px;font-size:12px;color:var(--muted)}
+
+        /* Progress bar */
+        .lr-progress-wrap{display:flex;align-items:center;gap:6px;margin-top:4px}
+        .lr-progress-label{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;min-width:44px}
+        .lr-progress-total{font-weight:400;opacity:.6}
+        .lr-progress-done{font-size:9px;font-weight:800;letter-spacing:.04em;background:currentColor;color:#fff;border-radius:4px;padding:1px 5px;opacity:1;margin-left:3px;filter:brightness(1.6) saturate(.8)}
+        .lr-progress-track{flex:1;height:6px;border-radius:99px;overflow:hidden;min-width:60px}
+        .lr-progress-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+        .lr-progress-pct{font-size:10px;font-weight:700;flex-shrink:0;min-width:28px;text-align:right}
+
+        /* Interest chips */
+        .lr-interest-chips{display:flex;flex-wrap:wrap;gap:4px;flex-shrink:1;min-width:0}
+        .lr-interest-chip{
+          display:inline-flex;align-items:center;gap:4px;
+          padding:2px 8px 2px 5px;border-radius:99px;
+          font-size:10px;font-weight:700;white-space:nowrap;
+          background:color-mix(in srgb,var(--ic-color) 12%,white);
+          color:color-mix(in srgb,var(--ic-color) 75%,#1e293b);
+          border:1px solid color-mix(in srgb,var(--ic-color) 30%,transparent);
+          transition:transform .15s,box-shadow .15s;
+        }
+        .lr-interest-chip:hover{transform:translateY(-1px);box-shadow:0 2px 8px color-mix(in srgb,var(--ic-color) 25%,transparent)}
+        .lr-interest-dot{width:6px;height:6px;border-radius:50%;background:var(--ic-color);flex-shrink:0}
 
         /* Empty / skeleton */
         .lr-empty{display:grid;place-items:center;text-align:center;padding:60px 20px;color:var(--muted);background:var(--white);border-radius:14px;box-shadow:0 4px 18px rgba(38,48,105,.06)}
         .lr-empty svg{margin-bottom:14px;opacity:.35}
         .lr-empty h3{margin:0 0 8px;color:var(--ink);font-size:18px}
         .lr-empty p{margin:0;font-size:13px}
-        .lr-skeleton{height:62px;border-radius:12px;background:linear-gradient(90deg,var(--lavender) 25%,#f5f6ff 50%,var(--lavender) 75%);background-size:200% 100%;animation:lrShimmer 1.4s infinite}
+        .lr-skeleton{height:84px;border-radius:12px;background:linear-gradient(90deg,var(--lavender) 25%,#f5f6ff 50%,var(--lavender) 75%);background-size:200% 100%;animation:lrShimmer 1.4s infinite}
         @keyframes lrShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
         /* Pagination */
@@ -359,6 +492,8 @@ export default function AdminLearnersPage() {
           .lr-joined{display:none}
           .lr-role-col{flex:0 0 90px}
           .lr-col-header{display:none}
+          .lr-progress-pct{display:none}
+          .lr-interest-chips{display:none}
         }
       `}</style>
     </section>

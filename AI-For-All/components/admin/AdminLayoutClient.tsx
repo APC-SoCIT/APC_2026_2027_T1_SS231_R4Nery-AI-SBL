@@ -5,7 +5,7 @@ import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'luci
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { getMockSession } from '@/lib/mock-auth'
+import { getMockSession, clearMockSession } from '@/lib/mock-auth'
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -32,6 +32,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   }
 
   const handleLogout = async () => {
+    clearMockSession()
     await supabase.auth.signOut()
     router.push('/sign-in')
   }

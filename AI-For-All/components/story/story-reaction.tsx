@@ -3,7 +3,7 @@
 /**
  * components/story/story-reaction.tsx
  *
- * Story Reaction ("Check-in time") screen. Rendered by
+ * Story Reaction ("How was the Story") screen. Rendered by
  * app/stories/[storyId]/page.tsx as the 'reaction' step, right after the
  * learner finishes the last story step and before the Story Cleared screen.
  *
@@ -140,9 +140,7 @@ export function StoryReaction({ story, isGuest, onContinue }: StoryReactionProps
   return (
     <main className={styles.page}>
       <h2 className={styles.heading}>
-        Check-in time:
-        <br />
-        How&apos;s the story so far?
+        How was the Story?
       </h2>
       <p className={styles.subtitle}>Pick what fits best before we continue.</p>
 

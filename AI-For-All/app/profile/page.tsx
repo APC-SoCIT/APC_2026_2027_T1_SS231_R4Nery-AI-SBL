@@ -16,11 +16,12 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowLeft, Check, ChevronRight,
-  LogOut, Settings, UserRound, Lock, PowerOff, Eye, EyeOff,
+  LogOut, Settings, UserRound, Lock, PowerOff, Eye, EyeOff, Sparkles,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
 import { RegisteredBottomNav } from '@/components/nav/registered-bottom-nav'
+import { topicColor } from '@/lib/topics'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ export default function ProfileHubPage() {
   const [view, setView] = useState<View>('main')
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [interests, setInterests] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   // Profile Details state
@@ -96,14 +98,18 @@ export default function ProfileHubPage() {
     '/ai-for-all/avatars/avatar-5.png',
   ]
 
+  // Password rules — must match sign-up: 8+ chars, letters & numbers only
+  const PASSWORD_PATTERN = /^[A-Za-z0-9]+$/
+
   // ── Load profile + progress ─────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       try {
-        const [profileRes, progressRes, avatarRes] = await Promise.all([
+        const [profileRes, progressRes, avatarRes, interestsRes] = await Promise.all([
           fetch('/api/account/profile'),
           fetch('/api/progress'),
           fetch('/api/account/avatar'),
+          fetch('/api/account/interests'),
         ])
 
         if (profileRes.status === 401) {
@@ -134,6 +140,11 @@ export default function ProfileHubPage() {
           const prog = await progressRes.json()
           setProgress({ completedModules: prog.completedModules ?? [] })
         }
+
+        if (interestsRes.ok) {
+          const intData = await interestsRes.json()
+          setInterests(intData.interests ?? [])
+        }
       } catch (err: any) {
         toast.error(err.message ?? 'Failed to load profile.')
       } finally {
@@ -149,19 +160,24 @@ export default function ProfileHubPage() {
     const avatarUrl = AVATAR_OPTIONS[index]
     try {
       // Persist the selected preset URL via the avatar API
-      const fd = new FormData()
-      // Encode the preset URL as a special field so the API can store it
       const res = await fetch('/api/account/avatar', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarUrl }),
       })
-      const data = res.ok ? await res.json() : null
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to save avatar.')
       const saved = data?.avatarUrl ?? avatarUrl
       setProfile(prev => prev ? { ...prev, avatarUrl: saved } : prev)
       toast.success('Avatar updated!')
-    } catch {
-      // Non-fatal: the selection is shown locally either way
+    } catch (err: any) {
+      toast.error(err.message ?? 'Could not save avatar. Please try again.')
+      // Revert the local selection if the save failed
+      setSelectedAvatar(
+        AVATAR_OPTIONS.findIndex(a => a === profile?.avatarUrl) >= 0
+          ? AVATAR_OPTIONS.findIndex(a => a === profile?.avatarUrl)
+          : null
+      )
     }
   }
 
@@ -217,9 +233,11 @@ export default function ProfileHubPage() {
   }
 
   // ── Change password ──────────────────────────────────────────────────────────
-  function validateNewPassword(pw: string): string[] {
+  function validateNewPassword(pw: string, current: string): string[] {
     const errors: string[] = []
     if (pw.length < 8) errors.push('Password must be at least 8 characters.')
+    if (!PASSWORD_PATTERN.test(pw)) errors.push('Password can only contain letters and numbers — no symbols or spaces.')
+    if (pw === current) errors.push('New password cannot be the same as your current password.')
     return errors
   }
 
@@ -229,14 +247,14 @@ export default function ProfileHubPage() {
     setPwSuccess(false)
 
     // Client-side validation
-    const validationErrors = validateNewPassword(newPassword)
+    if (!currentPassword) {
+      setPwErrors(['Please enter your current password.'])
+      return
+    }
+    const validationErrors = validateNewPassword(newPassword, currentPassword)
     if (validationErrors.length > 0) { setPwErrors(validationErrors); return }
     if (newPassword !== confirmPassword) {
       setPwErrors(['New password and confirmation do not match.'])
-      return
-    }
-    if (!currentPassword) {
-      setPwErrors(['Please enter your current password.'])
       return
     }
 
@@ -479,7 +497,7 @@ export default function ProfileHubPage() {
                       type={showNewPw ? 'text' : 'password'}
                       value={newPassword}
                       onChange={e => { setNewPassword(e.target.value); setPwErrors([]); setPwSuccess(false) }}
-                      placeholder="At least 8 characters"
+                      placeholder="8+ characters, letters and numbers only"
                       autoComplete="new-password"
                       minLength={8}
                       required
@@ -493,6 +511,9 @@ export default function ProfileHubPage() {
                       {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>
+                    8+ characters, letters and numbers only (no symbols or spaces).
+                  </span>
                 </label>
 
                 <label className="prof-sub-label">
@@ -657,6 +678,31 @@ export default function ProfileHubPage() {
           <span>Goals</span>
         </div>
       </div>
+
+      {/* ── Interests card ─────────────────────────────────────────────── */}
+      {interests.length > 0 && (
+        <div className="prof-interests-card">
+          <p className="prof-interests-label">
+            <Sparkles size={13} />
+            My Interests
+          </p>
+          <div className="prof-interests-chips">
+            {interests.map(topic => {
+              const color = topicColor(topic)
+              return (
+                <span
+                  key={topic}
+                  className="prof-interest-chip"
+                  style={{ '--ic-color': color } as React.CSSProperties}
+                >
+                  <span className="prof-interest-dot" aria-hidden="true" />
+                  {topic}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Menu card ─────────────────────────────────────────────────── */}
       <div className="prof-menu-card" role="navigation" aria-label="Profile navigation">

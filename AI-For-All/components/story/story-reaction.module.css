@@ -1,5 +1,5 @@
 /* components/story/story-reaction.module.css
-   Story Reaction ("Check-in time") screen.
+   Story Reaction ("How was the Story") screen.
    Scoped as a CSS module (same approach as app/admin/(cms)/stories/create)
    so app/globals.css is untouched; colors come from the global design
    tokens (--apc-*, --muted) defined in app/globals.css. */
