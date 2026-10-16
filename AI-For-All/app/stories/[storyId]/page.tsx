@@ -409,6 +409,24 @@ export default function StoryScenePage() {
   )
 }
 
+function trackHandoffClick(storyId: string) {
+  try {
+    const payload = JSON.stringify({ storyId })
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/handoff-click', new Blob([payload], { type: 'application/json' }))
+    } else {
+      fetch('/api/handoff-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {})
+    }
+  } catch {
+    // Non-blocking
+  }
+}
+
 function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean }) {
   return (
     <main className="story-cleared-page">
@@ -457,7 +475,13 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
               </div>
               <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
               {story.skillsBuildUrl ? (
-                <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                <a
+                  href={story.skillsBuildUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="story-cleared-btn"
+                  onClick={() => trackHandoffClick(story.id)}
+                >
                   {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                 </a>
               ) : (
@@ -493,7 +517,13 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                     <Star size={10} className="story-cleared-book-star" />
                   </div>
                   <strong className="story-cleared-cta-label">Want to learn more about AI?</strong>
-                  <a href={story.skillsBuildUrl} target="_blank" rel="noreferrer" className="story-cleared-btn">
+                  <a
+                    href={story.skillsBuildUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="story-cleared-btn"
+                    onClick={() => trackHandoffClick(story.id)}
+                  >
                     {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                   </a>
                 </div>
