@@ -160,7 +160,7 @@ export default function StoryScenePage() {
     )
   }
 
-  // Render the reaction check-in screen (outside the scene layout)
+  // Render the Story Reaction ("How was the Story") screen (outside the scene layout)
   if (step === 'reaction' && story) {
     return <StoryReaction story={story} isGuest={isGuest} onContinue={() => setStep('cleared')} />
   }
