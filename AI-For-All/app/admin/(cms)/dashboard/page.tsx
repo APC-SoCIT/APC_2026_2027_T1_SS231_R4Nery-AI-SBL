@@ -288,6 +288,12 @@ export default function AdminDashboardPage() {
                 <ChevronRight size={18} />
               </button>
 
+              <button className="quick-action" onClick={() => router.push('/admin/metrics')}>
+                <span style={{ background: '#fbcfe8', display: 'grid', placeItems: 'center', width: 35, height: 35, borderRadius: 9 }}><BarChart3 size={18} /></span>
+                <div><strong>Reactions &amp; IBM Handoff</strong><small>Engagement &amp; handoff CTR metrics</small></div>
+                <ChevronRight size={18} />
+              </button>
+
               <div className="dash-summary-strip">
                 <div className="dash-summary-item">
                   <strong>{stats?.publishedStories ?? 0}</strong>

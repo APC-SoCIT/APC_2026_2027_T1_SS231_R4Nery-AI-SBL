@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target } from 'lucide-react'
+import { BookOpen, LayoutDashboard, LogOut, Settings, Users, Target, BarChart3 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -39,6 +39,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Metrics', path: '/admin/metrics', icon: BarChart3 },
     { name: 'Goalboard', path: '/admin/goalboard', icon: Target },
     { name: 'Stories', path: '/admin/stories', icon: BookOpen },
     { name: 'Learners', path: '/admin/learners', icon: Users },
