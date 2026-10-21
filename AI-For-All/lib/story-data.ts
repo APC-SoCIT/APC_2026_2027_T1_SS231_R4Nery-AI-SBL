@@ -38,6 +38,8 @@ export type StoryModule = {
   storyFor?: 'all' | 'guests' | 'registered'
   scenes: StoryScene[]
   activity?: StoryActivity
+  /** An educational description about what the AI concept in the story is and the story context. Shown on the reaction screen after completing the story. */
+  aiDescription?: string
 }
 
 export const defaultStories: StoryModule[] = [
@@ -87,7 +89,8 @@ export const defaultStories: StoryModule[] = [
           { id: 'c3-b', label: 'Copy it right away without reading', weight: -1 }
         ]
       }
-    ]
+    ],
+    aiDescription: 'This story explores how AI-powered study helpers work — tools that can organise your notes, generate quizzes, and adapt to your learning style. The key lesson is that clear, specific prompts lead to better AI responses, and you should always verify AI-generated content before using it.'
   },
   {
     id: 'story-train-your-bot',
@@ -129,7 +132,8 @@ export const defaultStories: StoryModule[] = [
     activity: {
       intellectPrompt: 'In your own words, explain how organizing books into groups and remembering what readers liked helps a smart helper give better suggestions.',
       otherRoutePrompt: 'Imagine a smart book helper that surprises readers in a fun way. Write a short description of how it would pick books nobody expected!'
-    }
+    },
+    aiDescription: 'This story teaches how AI recommendation systems are trained — by organising data into meaningful categories and learning from user preferences. Maya\'s book helper demonstrates how structured training data and user feedback help AI make better, more relevant suggestions over time.'
   },
   {
     id: 'story-trust-the-system',
@@ -171,7 +175,8 @@ export const defaultStories: StoryModule[] = [
     activity: {
       intellectPrompt: 'Think of two things people can do to make sure smart tools treat everyone fairly. Write them down in your own words.',
       otherRoutePrompt: 'Imagine a story where a person and a smart tool work together to fix something unfair. What happens? Write a few sentences about it.'
-    }
+    },
+    aiDescription: 'This story explores AI bias and the importance of human oversight in automated decision-making. It shows that AI tools can unintentionally treat some groups unfairly, and that having a real person review important AI decisions is essential for building trustworthy, equitable technology.'
   }
 ]
 

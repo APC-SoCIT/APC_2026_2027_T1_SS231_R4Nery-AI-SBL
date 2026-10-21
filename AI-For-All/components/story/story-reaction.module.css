@@ -30,3 +30,54 @@
   .face { max-width:96px; }
   .label { font-size:14px; }
 }
+
+/* ─── AI Description Card ────────────────────────────────────────── */
+.aiDescriptionCard {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  max-width: 360px;
+  padding: 16px 18px;
+  margin: 0 auto 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(99,136,237,.08), rgba(148,94,255,.06));
+  border: 1px solid rgba(99,136,237,.18);
+  border-left: 4px solid var(--apc-blue, #4171d6);
+  text-align: left;
+  animation: aiDescSlideIn .45s ease-out both;
+}
+@keyframes aiDescSlideIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aiDescriptionIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--apc-blue, #4171d6), #7c5cf0);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(65,113,214,.25);
+}
+.aiDescriptionContent { flex: 1; min-width: 0; }
+.aiDescriptionTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--apc-navy-deep, #1a1a2e);
+}
+.aiDescriptionText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #4a5580;
+}
+
+@media (min-width:768px) {
+  .aiDescriptionCard { max-width: 520px; padding: 18px 22px; }
+  .aiDescriptionTitle { font-size: 14px; }
+  .aiDescriptionText { font-size: 13.5px; }
+}
