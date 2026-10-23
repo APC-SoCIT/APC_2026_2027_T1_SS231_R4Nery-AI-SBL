@@ -99,6 +99,10 @@ export default function CreateStoryWizard() {
       }
       if (data.story) {
         setGeneratedStory(data.story)
+        // Pre-fill the AI Description from the generated scenes (admin can still edit it)
+        if (typeof data.story.aiDescription === 'string') {
+          setAiDescription(data.story.aiDescription.trim())
+        }
         setLoading(false)
         setProgress(100)
         await new Promise(r => setTimeout(r, 500))
@@ -588,7 +592,7 @@ export default function CreateStoryWizard() {
             <div className={styles.inputGroup} style={{ marginBottom: '24px' }}>
               <label className={styles.inputLabel}>🤖 AI Description</label>
               <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#64647b' }}>
-                Explain what AI concept this story covers and why it matters. Shown to learners on the check-in screen after completing the story.
+                E                Auto-generated from the scenes: names the AI concept and how it connects to the story. Edit freely. Shown to learners on the check-in screen after completing the story.
               </p>
               <textarea
                 className={styles.textArea}

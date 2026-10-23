@@ -193,7 +193,10 @@ CRITICAL RULES:
 7. The story body in each scene should be 2-3 short sentences, vivid and specific.
 8. Choice labels should be everyday actions written in simple language — things a child or grandparent would understand.
 9. Activity prompts should feel fun, not like homework. Use phrases like "In your own words…", "Draw or describe…", "Imagine…".
-
+10. Also write an "aiDescription" — a short explanation (3-4 simple sentences) shown to the learner AFTER they finish the story, under the heading "What is this AI about?". Write it AFTER you have written the scenes, so it matches them. It MUST do two things:
+   a) NAME the AI idea the story teaches, in plain everyday words (e.g. "smart helpers learn from examples", "a smart tool can be unfair if it only saw some people", "always double-check what a smart helper tells you"). The idea must be "${concept || title || 'Smart Helpers'}".
+   b) CONNECT that idea to the story: point to specific moments, characters, or choices from YOUR scenes (e.g. "When Mia showed the helper more examples in Scene 2, it got better at...") so the learner sees where the idea appeared in what they just read.
+   Follow the same reading level and banned-word rules. Speak directly to the reader ("you"). Do not mention scores, weights, or the two paths by name.
 Return ONLY valid JSON matching this exact structure:
 {
   "title": "Story Title",
@@ -213,6 +216,7 @@ Return ONLY valid JSON matching this exact structure:
       ]
     }
   ],
+    "aiDescription": "3-4 simple sentences: first name the smart-helper idea, then show how it appeared in specific scenes and choices of this story",
   ${type === 'with_activity' ? `"activity": {
     "intellectPrompt": "A fun, hands-on question that asks the learner to explain or show what they learned in their own words...",
     "otherRoutePrompt": "A creative, imaginative question that asks the learner to dream up something new..."
