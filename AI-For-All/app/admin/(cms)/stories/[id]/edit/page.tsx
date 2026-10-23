@@ -168,6 +168,21 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
            </div>
          </div>
 
+         {/* AI Description — shown on the reaction screen after the story ends */}
+         <div className={styles.inputGroup} style={{ marginBottom: '30px' }}>
+           <label className={styles.inputLabel}>🤖 AI Description</label>
+           <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#64647b' }}>
+             Explain what AI concept this story covers and why it matters. Shown to learners on the check-in screen after completing the story.
+           </p>
+           <textarea
+             className={styles.textArea}
+             rows={3}
+             value={story.aiDescription || ''}
+             onChange={e => setStory({ ...story, aiDescription: e.target.value })}
+             placeholder="e.g. This story explores how AI-powered study helpers work — tools that can organise your notes, generate quizzes, and adapt to your learning style."
+           />
+         </div>
+
          {validationErrors.length > 0 && (
            <div style={{
              background: '#fef2f2',

@@ -27,6 +27,7 @@ export async function fetchAllStories(): Promise<StoryModule[]> {
         skillsBuildButtonText: row.skills_build_button_text || 'Take Course',
         scenes: row.scenes || [],
         activity: row.activity || undefined,
+        aiDescription: row.ai_description || '',
       }));
 
       // ONLY merge default stories if the database is literally empty on first load.
@@ -87,6 +88,7 @@ export async function saveStoryToDb(story: StoryModule): Promise<boolean> {
       skills_build_button_text: story.skillsBuildButtonText || 'Take Course',
       scenes: story.scenes,
       activity: story.activity || null,
+      ai_description: story.aiDescription || '',
       updated_at: new Date().toISOString(),
     };
 

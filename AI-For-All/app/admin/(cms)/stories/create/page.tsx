@@ -55,6 +55,7 @@ export default function CreateStoryWizard() {
   const [skillsBuildButtonText, setSkillsBuildButtonText] = useState('Explore IBM Course')
   const [allowFreeText, setAllowFreeText] = useState(true)
   const [storyFor, setStoryFor] = useState<'all' | 'guests' | 'registered'>('all')
+  const [aiDescription, setAiDescription] = useState('')
   const [goalboardTopics, setGoalboardTopics] = useState<string[]>([])
   const [gbCustomTopic, setGbCustomTopic] = useState('')
 
@@ -186,6 +187,7 @@ export default function CreateStoryWizard() {
       skillsBuildButtonText,
       allowFreeText,
       storyFor,
+      aiDescription,
       updatedAt: 'Just now',
       createdAt: new Date().toISOString(),
     }
@@ -580,6 +582,21 @@ export default function CreateStoryWizard() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* AI Description — shown at the end of the story */}
+            <div className={styles.inputGroup} style={{ marginBottom: '24px' }}>
+              <label className={styles.inputLabel}>🤖 AI Description</label>
+              <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#64647b' }}>
+                Explain what AI concept this story covers and why it matters. Shown to learners on the check-in screen after completing the story.
+              </p>
+              <textarea
+                className={styles.textArea}
+                rows={3}
+                value={aiDescription}
+                onChange={e => setAiDescription(e.target.value)}
+                placeholder="e.g. This story explores how AI-powered study helpers work — tools that can organise your notes, generate quizzes, and adapt to your learning style."
+              />
             </div>
 
             {/* Goalboard Topics — multi-select chip picker */}
