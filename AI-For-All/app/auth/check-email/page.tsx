@@ -69,7 +69,7 @@ function CheckEmailInner() {
         </Link>
         <img
           className="authpage-mascot-img authpage-mascot-lg signup-mascot"
-          src="/ai-for-all/Mascot-look-down.png"
+          src="/ai-for-all/Mascot-look-down.webp"
           alt="AI for ALL mascot"
           // Same size and position as Sign Up: paws on the header/body dividing line
           style={{ bottom: 0 }}

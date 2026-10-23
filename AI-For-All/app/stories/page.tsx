@@ -14,9 +14,9 @@ const GUEST_STORY_KEY = 'ai-for-all:guest-story'
 // Per-story illustrations aren't stored in Supabase yet, so we cycle
 // through these three local mascots by card position.
 const FALLBACK_MASCOTS = [
-  '/ai-for-all/Story-Page-Mascot-1.png',
-  '/ai-for-all/Story-Page-Mascot-2.png',
-  '/ai-for-all/Story-Page-Mascot-3.png',
+  '/ai-for-all/Story-Page-Mascot-1.webp',
+  '/ai-for-all/Story-Page-Mascot-2.webp',
+  '/ai-for-all/Story-Page-Mascot-3.webp',
 ]
 // Story card palette, assigned by card position so neighbouring cards never share a colour.
 // Also used by the Archive page (app/archive/page.tsx) so both pages follow the same sequence.
@@ -238,7 +238,7 @@ export default function StoriesPage() {
                     </li>
                   ))}
                 </ul>
-                <img src={story.mascot} alt="" />
+                <img src={story.mascot} alt="" loading="lazy" decoding="async" />
               </button>
             ))}
           </div>

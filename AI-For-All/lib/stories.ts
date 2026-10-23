@@ -12,21 +12,21 @@ export const storyList: StoryMeta[] = [
     title: 'Study Buddy',
     color: '#6f8ce8',
     bullets: ['Build a smarter study plan', 'Learn how prompts affect answers', 'Discover rule-based chatbots'],
-    cardMascot: '/ai-for-all/Story-Page-Mascot-1.png',
+    cardMascot: '/ai-for-all/Story-Page-Mascot-1.webp',
   },
   {
     id: 'train-your-bot',
     title: 'Train Your Bot',
     color: '#ff7a45',
     bullets: ['Train your robot with examples', 'Test how it recognizes patterns', 'Correct mistakes with feedback'],
-    cardMascot: '/ai-for-all/Story-Page-Mascot-2.png',
+    cardMascot: '/ai-for-all/Story-Page-Mascot-2.webp',
   },
   {
     id: 'trust-the-system',
     title: 'Trust the System?',
     color: '#66cf9e',
     bullets: ['Explore AI recommendations', 'Spot bias and poor suggestions', 'Decide when to trust or override AI'],
-    cardMascot: '/ai-for-all/Story-Page-Mascot-3.png',
+    cardMascot: '/ai-for-all/Story-Page-Mascot-3.webp',
   },
 ]
 

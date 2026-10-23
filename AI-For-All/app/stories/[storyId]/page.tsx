@@ -9,9 +9,10 @@ import { StoryModule } from '@/lib/story-data'
 import { useSession } from '@/lib/sessionContext'
 import { SignupPrompt } from '@/components/auth/signup-prompt'
 import { StoryReaction } from '@/components/story/story-reaction'
+import { StoryConcept } from '@/components/story/story-concept'
 import toast from 'react-hot-toast'
 
-type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'reaction' | 'cleared' | 'not-found'
+type Step = 'splash' | 'scene' | 'gate' | 'activity' | 'response' | 'concept' | 'reaction' | 'cleared' | 'not-found'
 
 const PROGRESS_KEY_PREFIX = 'ai-for-all:story-progress:'
 // localStorage key for a story completed by a guest that needs to be synced after sign-in
@@ -74,7 +75,7 @@ export default function StoryScenePage() {
     const key = PROGRESS_KEY_PREFIX + story.id
     if (step === 'scene' || step === 'gate' || step === 'activity' || step === 'response') {
       sessionStorage.setItem(key, JSON.stringify({ step, sceneIndex, score, promptText, history }))
-    } else if (step === 'reaction' || step === 'cleared') {
+    } else if (step === 'concept' || step === 'reaction' || step === 'cleared') {
       // Story finished — clear saved progress so a future visit starts fresh.
       sessionStorage.removeItem(key)
     }
@@ -135,7 +136,7 @@ export default function StoryScenePage() {
       } else if (!isGuest && story) {
         saveProgress(story.id)
       }
-    } else if (step === 'reaction' && !isGuest && story) {
+    } else if ((step === 'concept' || step === 'reaction') && !isGuest && story) {
       // Also save on the reaction step for authenticated users (belt-and-suspenders)
       saveProgress(story.id)
     }
@@ -158,6 +159,11 @@ export default function StoryScenePage() {
         <p style={{ padding: 24, color: 'var(--muted)' }}>Loading story…</p>
       </main>
     )
+  }
+
+  // Render the "What is this AI about?" screen (before the reaction screen)
+  if (step === 'concept' && story) {
+    return <StoryConcept story={story} onContinue={() => setStep('reaction')} />
   }
 
   // Render the Story Reaction ("How was the Story") screen (outside the scene layout)
@@ -192,6 +198,11 @@ export default function StoryScenePage() {
     ? story.activity?.intellectPrompt
     : story.activity?.otherRoutePrompt
 
+  // After the story: show the AI description first (if the story has one), then the reaction screen.
+  function finishStory() {
+    setStep(story?.aiDescription ? 'concept' : 'reaction')
+  }
+
   function choose(weight: number) {
     if (!story) return
     setScore((s) => s + weight)
@@ -206,7 +217,7 @@ export default function StoryScenePage() {
     if (story.type === 'with_activity') {
       setStep(gatedActivity ? 'gate' : 'activity')
     } else {
-      setStep('reaction')
+      finishStory()
     }
   }
 
@@ -284,7 +295,7 @@ export default function StoryScenePage() {
           <span className="story-splash-spark story-splash-spark--2" aria-hidden="true">●</span>
           <span className="story-splash-spark story-splash-spark--3" aria-hidden="true">●</span>
           <span className="story-splash-spark story-splash-spark--4" aria-hidden="true">◆</span>
-          <img src="/ai-for-all/Mascot-look-down.png" alt="" className="story-splash-mascot" />
+          <img src="/ai-for-all/Mascot-look-down.webp" alt="" className="story-splash-mascot" />
         </div>
         <div className="story-splash-card">
           <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
@@ -332,7 +343,7 @@ export default function StoryScenePage() {
         <img
           key={dialogueKey}
           className="story-scene-mascot"
-          src="/ai-for-all/Story-Ai-Mascot.png"
+          src="/ai-for-all/Story-Ai-Mascot.webp"
           alt=""
           aria-hidden="true"
           style={{ width: 'clamp(150px, min(60vw, 32vh), 320px)', height: 'auto', margin: 'calc(clamp(150px, min(60vw, 32vh), 320px) * -0.157) 0 calc(clamp(150px, min(60vw, 32vh), 320px) * -0.171)', objectFit: 'contain', pointerEvents: 'none' }}
@@ -378,7 +389,7 @@ export default function StoryScenePage() {
             <Link href="/sign-up" className="stories-cta" style={{ textAlign: 'center' }}>
               Sign Up
             </Link>
-            <button type="button" className="choice-button" onClick={() => setStep('reaction')}>
+            <button type="button" className="choice-button" onClick={finishStory}>
               Skip for now
             </button>
           </div>
@@ -408,7 +419,7 @@ export default function StoryScenePage() {
           <div className="story-scene-bubble">
             {isEvaluating ? 'Reading your answer...' : (aiResponse || `Nice work — your answer showed real thinking about ${story.category.toLowerCase()}.`)}
           </div>
-          <button type="button" className="stories-cta" onClick={() => setStep('reaction')} disabled={isEvaluating}>
+          <button type="button" className="stories-cta" onClick={finishStory} disabled={isEvaluating}>
             Finish
           </button>
         </>
@@ -418,11 +429,15 @@ export default function StoryScenePage() {
 }
 
 function trackHandoffClick(storyId: string) {
+  // Fire-and-forget; must survive the new tab opening / page unloading.
   try {
     const payload = JSON.stringify({ storyId })
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/handoff-click', new Blob([payload], { type: 'application/json' }))
-    } else {
+    let queued = false
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      queued = navigator.sendBeacon('/api/handoff-click', new Blob([payload], { type: 'application/json' }))
+    }
+    if (!queued) {
+      // sendBeacon unavailable or refused (queue full) — fall back to keepalive fetch
       fetch('/api/handoff-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -431,7 +446,7 @@ function trackHandoffClick(storyId: string) {
       }).catch(() => {})
     }
   } catch {
-    // Non-blocking
+    // Non-blocking: never interrupt the learner's navigation
   }
 }
 
@@ -489,6 +504,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                   rel="noreferrer"
                   className="story-cleared-btn"
                   onClick={() => trackHandoffClick(story.id)}
+                  onAuxClick={(e) => { if (e.button === 1) trackHandoffClick(story.id) }}
                 >
                   {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                 </a>
@@ -531,6 +547,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                     rel="noreferrer"
                     className="story-cleared-btn"
                     onClick={() => trackHandoffClick(story.id)}
+                  onAuxClick={(e) => { if (e.button === 1) trackHandoffClick(story.id) }}
                   >
                     {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                   </a>

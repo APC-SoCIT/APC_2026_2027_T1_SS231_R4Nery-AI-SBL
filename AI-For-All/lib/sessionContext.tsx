@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -75,6 +76,8 @@ function buildSession(user: User, role?: string): UserSession {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null)
   const [loading, setLoading] = useState(true)
+  // Remember the last known role so auth-state events don't reset it to default
+  const roleRef = useRef<string | undefined>(undefined)
 
   const refresh = useCallback(async () => {
     // Supabase may not be configured in dev (no .env.local) — skip gracefully
@@ -87,23 +90,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     const supabase = createClient()
+
+    // getSession() reads the locally stored session (no network round trip),
+    // so the UI can render immediately. Server-side routes and the proxy still
+    // verify the user with getUser(), so this is only used for UI state.
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session: authSession },
+    } = await supabase.auth.getSession()
+    const user = authSession?.user ?? null
 
     if (user) {
-      // Fetch the role from the `users` table
+      // Render right away with the default role, then upgrade it once the
+      // role lookup returns — the role query no longer blocks first paint.
+      setSession(buildSession(user, roleRef.current))
+      setLoading(false)
+
       const { data: userRow } = await supabase
         .from('users')
         .select('role')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      setSession(buildSession(user, userRow?.role))
+      if (userRow?.role) {
+        roleRef.current = userRow.role
+        setSession(buildSession(user, userRow.role))
+      }
     } else {
       setSession(null)
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -122,7 +137,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s?.user ? buildSession(s.user) : null)
+      setSession(s?.user ? buildSession(s.user, roleRef.current) : null)
       setLoading(false)
     })
 

@@ -71,7 +71,7 @@ export default function GetStartedPage() {
   return (
     <main className="getstarted-page">
       <div className="getstarted-content">
-        <img className="getstarted-logo" src="/APC Logo.png" alt="Asia Pacific College" />
+        <img className="getstarted-logo" src="/apc-logo.webp" alt="Asia Pacific College" />
         <h2>
           Let&apos;s get
           <br />
@@ -104,7 +104,7 @@ export default function GetStartedPage() {
       <div className="getstarted-mascot" aria-hidden="true">
         <span className="getstarted-circle" />
         <img className="getstarted-swirl" src="/ai-for-all/swirly-for-get-started-page.png" alt="" />
-        <img className="getstarted-mascot-char" src="/ai-for-all/Mascot-look-up.png" alt="" />
+        <img className="getstarted-mascot-char" src="/ai-for-all/Mascot-look-up.webp" alt="" />
       </div>
     </main>
   )
