@@ -20,6 +20,8 @@ dist/
 .env.production.local
 *.env
 !.env.example
+.orig
+*.orig
 
 # ── secrets / credentials (belt-and-suspenders) ──
 *.pem

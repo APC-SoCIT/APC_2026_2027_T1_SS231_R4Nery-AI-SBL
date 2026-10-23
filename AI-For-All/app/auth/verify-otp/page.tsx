@@ -194,7 +194,7 @@ function VerifyOtpInner() {
           </Link>
           <img
             className="authpage-mascot-img signup-mascot"
-            src="/ai-for-all/Mascot-look-down.png"
+            src="/ai-for-all/Mascot-look-down.webp"
             alt="AI for ALL mascot"
           />
         </div>
@@ -256,7 +256,7 @@ function VerifyOtpInner() {
         </Link>
         <img
           className="authpage-mascot-img signup-mascot"
-          src="/ai-for-all/Mascot-look-down.png"
+          src="/ai-for-all/Mascot-look-down.webp"
           alt="AI for ALL mascot"
         />
       </div>

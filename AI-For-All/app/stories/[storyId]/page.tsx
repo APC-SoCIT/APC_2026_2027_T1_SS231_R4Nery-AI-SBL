@@ -284,7 +284,7 @@ export default function StoryScenePage() {
           <span className="story-splash-spark story-splash-spark--2" aria-hidden="true">●</span>
           <span className="story-splash-spark story-splash-spark--3" aria-hidden="true">●</span>
           <span className="story-splash-spark story-splash-spark--4" aria-hidden="true">◆</span>
-          <img src="/ai-for-all/Mascot-look-down.png" alt="" className="story-splash-mascot" />
+          <img src="/ai-for-all/Mascot-look-down.webp" alt="" className="story-splash-mascot" />
         </div>
         <div className="story-splash-card">
           <p>{story.description || `A story about ${story.title.toLowerCase()}.`}</p>
@@ -332,7 +332,7 @@ export default function StoryScenePage() {
         <img
           key={dialogueKey}
           className="story-scene-mascot"
-          src="/ai-for-all/Story-Ai-Mascot.png"
+          src="/ai-for-all/Story-Ai-Mascot.webp"
           alt=""
           aria-hidden="true"
           style={{ width: 'clamp(150px, min(60vw, 32vh), 320px)', height: 'auto', margin: 'calc(clamp(150px, min(60vw, 32vh), 320px) * -0.157) 0 calc(clamp(150px, min(60vw, 32vh), 320px) * -0.171)', objectFit: 'contain', pointerEvents: 'none' }}
@@ -418,11 +418,15 @@ export default function StoryScenePage() {
 }
 
 function trackHandoffClick(storyId: string) {
+  // Fire-and-forget; must survive the new tab opening / page unloading.
   try {
     const payload = JSON.stringify({ storyId })
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/handoff-click', new Blob([payload], { type: 'application/json' }))
-    } else {
+    let queued = false
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      queued = navigator.sendBeacon('/api/handoff-click', new Blob([payload], { type: 'application/json' }))
+    }
+    if (!queued) {
+      // sendBeacon unavailable or refused (queue full) — fall back to keepalive fetch
       fetch('/api/handoff-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -431,7 +435,7 @@ function trackHandoffClick(storyId: string) {
       }).catch(() => {})
     }
   } catch {
-    // Non-blocking
+    // Non-blocking: never interrupt the learner's navigation
   }
 }
 
@@ -489,6 +493,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                   rel="noreferrer"
                   className="story-cleared-btn"
                   onClick={() => trackHandoffClick(story.id)}
+                  onAuxClick={(e) => { if (e.button === 1) trackHandoffClick(story.id) }}
                 >
                   {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                 </a>
@@ -531,6 +536,7 @@ function StoryCleared({ story, isGuest }: { story: StoryModule; isGuest: boolean
                     rel="noreferrer"
                     className="story-cleared-btn"
                     onClick={() => trackHandoffClick(story.id)}
+                  onAuxClick={(e) => { if (e.button === 1) trackHandoffClick(story.id) }}
                   >
                     {story.skillsBuildButtonText || 'IBM SkillsBuild'}
                   </a>

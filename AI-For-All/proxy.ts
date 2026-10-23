@@ -79,14 +79,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     *  - _next/static (static files)
-     *  - _next/image (image optimisation)
-     *  - favicon.ico, sitemap.xml, robots.txt
-     *  - public assets in /ai-for-all/ and /icon*
-     */
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|ai-for-all/|icon).*)',
-  ],
+  // Only run the (network-bound) Supabase auth check on routes that actually
+  // need it. Public pages and public APIs (stories, handoff-click, reactions…)
+  // skip the proxy entirely, which removes one Supabase round trip per request.
+  matcher: ['/account/:path*', '/api/account/:path*', '/admin', '/admin/:path*'],
 }

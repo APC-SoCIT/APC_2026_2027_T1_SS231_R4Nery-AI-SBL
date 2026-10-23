@@ -1,6 +1,31 @@
 import { createClient } from './client';
 import { defaultStories, StoryModule } from '../story-data';
 
+const DEFAULT_STORY_IMAGE =
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design%20%2889%29%201-VY50vMtptXr0tOsB2AUUCKt4I96OmQ.png';
+
+// Map a DB row to the StoryModule shape used by the UI
+function mapRowToStory(row: any): StoryModule {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category || 'AI Basics',
+    level: row.level || 'Starter',
+    type: row.type === 'with_activity' ? 'with_activity' : 'choices_only',
+    description: row.description || '',
+    color: row.color || '#79a8ff',
+    image: row.image || DEFAULT_STORY_IMAGE,
+    status: row.status || 'Published',
+    updatedAt: row.updated_at ? new Date(row.updated_at).toLocaleDateString() : 'Recently',
+    createdAt: row.created_at || new Date().toISOString(),
+    skillsBuildUrl: row.skills_build_url || '',
+    skillsBuildButtonText: row.skills_build_button_text || 'Take Course',
+    scenes: row.scenes || [],
+    activity: row.activity || undefined,
+    aiDescription: row.ai_description || '',
+  };
+}
+
 export async function fetchAllStories(): Promise<StoryModule[]> {
   try {
     const supabase = createClient();
@@ -10,31 +35,7 @@ export async function fetchAllStories(): Promise<StoryModule[]> {
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
-      // Map DB columns to StoryModule type
-      const dbStories: StoryModule[] = data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        category: row.category || 'AI Basics',
-        level: row.level || 'Starter',
-        type: row.type === 'with_activity' ? 'with_activity' : 'choices_only',
-        description: row.description || '',
-        color: row.color || '#79a8ff',
-        image: row.image || 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design%20%2889%29%201-VY50vMtptXr0tOsB2AUUCKt4I96OmQ.png',
-        status: row.status || 'Published',
-        updatedAt: row.updated_at ? new Date(row.updated_at).toLocaleDateString() : 'Recently',
-        createdAt: row.created_at || new Date().toISOString(),
-        skillsBuildUrl: row.skills_build_url || '',
-        skillsBuildButtonText: row.skills_build_button_text || 'Take Course',
-        scenes: row.scenes || [],
-        activity: row.activity || undefined,
-        aiDescription: row.ai_description || '',
-      }));
-
-      // ONLY merge default stories if the database is literally empty on first load.
-      // But actually, if they delete everything, they want it to be empty.
-      // So we will just return the dbStories directly. 
-      // If you want default stories back, you can manually seed them.
-      return dbStories;
+      return data.map(mapRowToStory);
     } else if (data && data.length === 0) {
       // The table exists but is empty. Return empty array instead of re-injecting defaults
       // so that deleted items stay deleted.
@@ -65,6 +66,25 @@ export async function fetchAllStories(): Promise<StoryModule[]> {
 }
 
 export async function fetchStoryById(id: string): Promise<StoryModule | null> {
+  // Fast path: fetch ONLY the requested story instead of downloading every
+  // story (each with its full scenes JSON) and filtering in the browser.
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .in('id', [id, `story-${id}`])
+      .limit(2);
+
+    if (!error && data && data.length > 0) {
+      const row = data.find((r: any) => r.id === id) || data[0];
+      return mapRowToStory(row);
+    }
+  } catch (err) {
+    console.warn('[Stories DB] fetchStoryById failed, falling back:', err);
+  }
+
+  // Fallback (DB empty / offline / story only exists locally)
   const allStories = await fetchAllStories();
   return allStories.find(s => s.id === id || s.id === `story-${id}`) || null;
 }

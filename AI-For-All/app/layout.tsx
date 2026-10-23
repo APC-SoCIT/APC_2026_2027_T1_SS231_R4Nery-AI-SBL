@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/APC%20Logo.png',
-        type: 'image/png',
+        url: '/apc-logo.webp',
+        type: 'image/webp',
       },
     ],
     apple: '/apple-icon.png',
